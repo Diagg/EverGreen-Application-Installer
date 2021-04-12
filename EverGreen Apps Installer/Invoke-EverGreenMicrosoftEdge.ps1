@@ -1,49 +1,49 @@
 <#
 .SYNOPSIS
-Download and install Latest version of Google Chrome.
+Download and install Latest version of Microsoft Edge.
 
 .DESCRIPTION
 Performs download, silent installation, silent uninstallation and installation
-with disabled update of the lastest version of Google Chrome using the EverGreen Module.
-Default behavior without parameters will silent install x64 version of the latest Google Chrome
+with disabled update of the lastest version of Microsoft Edge using the EverGreen Module.
+Default behavior without parameters will silent install x64 version of the latest Microsoft Edge
 
 .PARAMETER Architecture
-Google chrome Architecture. If omitted, it will default to x64
+Microsoft Edge Architecture. If omitted, it will default to x64
 
 .PARAMETER DisableUpdate
-Will disable all update mechanisme of Google Chrome after installation
+Will disable all update mechanisme of Microsoft Edge after installation
 
 .PARAMETER Uninstall
-Will Silently uninstall any installed version of Google Chrome
+Will Silently uninstall any installed version of Microsoft Edge
 
 .PARAMETER PreDownloadPath
-Will only download Google Chrome to specified path, if Architecture is omited, it will default to x64
+Will only download Microsoft Edge to specified path, if Architecture is omited, it will default to x64
 
 .PARAMETER InstallSourcePath
-Will only install Google Chrome from the specified source path
+Will only install Microsoft Edge from the specified source path
 
 .PARAMETER Log
 Path to log file. If not specified will default to 
-C:\Windows\Logs\EvergreenApplication\EverGreen-GoogleChrome.log 
+C:\Windows\Logs\EvergreenApplication\EverGreen-MicrosoftEdge.log 
 
 .OUTPUTS
 all action are logged to the log file specified by the log parameter
 
 .EXAMPLE
-C:\PS> .\Invoke-EverGrennGoogleChrome -Architecture x86
+C:\PS> .\Invoke-EverGreenMicrosoftEdge -Architecture x86
 
-Download and silently Install the lastest x86 version of Google Chrome.
+Download and silently Install the lastest x86 version of Microsoft Edge.
 
 .EXAMPLE
-C:\PS> .\Invoke-EverGrennGoogleChrome -DisableUpdate
+C:\PS> .\Invoke-EverGreenMicrosoftEdge -DisableUpdate
 
-Download and silently Install the lastest x64 version of Google Chrome.
+Download and silently Install the lastest x64 version of Microsoft Edge.
 And disable all update mechanism
 
 .EXAMPLE
-C:\PS> .\Invoke-EverGrennGoogleChrome -Uninstall
+C:\PS> .\Invoke-EverGreenMicrosoftEdge -Uninstall
 
-Uninstall any locally installed version of Google Chrome
+Uninstall any locally installed version of Microsoft Edge
 
 .LINK
 http://www.OSD-Couture.com
@@ -101,7 +101,7 @@ $Script:CurrentScriptFullName = $MyInvocation.MyCommand.Path
 $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
 
 $AppDownloadDir = "$env:Public\Downloads"
-$AppName = "GoogleChrome"
+$AppName = "MicrosoftEdge"
 $AppExtension = ".msi"
 $AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
 $AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -269,7 +269,7 @@ If(($Uninstall -ne $true) -and [String]::IsNullOrWhiteSpace($InstallSourcePath))
             }
 
             ##==Check for latest version
-            $AppInfos = Get-EvergreenApp -Name $AppName | Where Architecture -eq $Architecture
+            $AppInfos = Get-EvergreenApp -Name $AppName | Where-Object { $_.Architecture -eq $Architecture -and $_.Channel -eq "Stable" }
     }
 
 
@@ -331,7 +331,7 @@ If ($AppIsInstalled -and $UnInstall -eq $True)
         ##== Additionnal removal action
         If (Test-Path ("C:\Program Files (x86)\Google\NOUpdate")){Run-AsSystemNow -ScriptBlock {Remove-Item "C:\Program Files (x86)\Google\NOUpdate" -Force -Recurse|Out-Null}}
         If (Test-Path ("C:\Program Files (x86)\Google\Update")){Run-AsSystemNow -ScriptBlock {Remove-Item "C:\Program Files (x86)\Google\Update" -Force -Recurse|Out-Null}}
-        If (Test-Path ("$env:UserProfile\Desktop\Google Chrome.lnk")){Remove-Item "$env:UserProfile\Desktop\Google Chrome.lnk" -Force|Out-Null}    
+        If (Test-Path ("$env:UserProfile\Desktop\Microsoft Edge.lnk")){Remove-Item "$env:UserProfile\Desktop\Microsoft Edge.lnk" -Force|Out-Null}    
     }
 
 
@@ -388,7 +388,7 @@ If ($DisableUpdate -and $Uninstall -ne $true -and [String]::IsNullOrWhiteSpace($
         Write-log "Disabling $APPNAME update feature !"
 
         $DisableUpdate_ScriptBlock = { 
-                set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped
+                set-Service MicrosoftEdgeElevationService -StartupType Disabled -Status Stopped
                 set-Service Gupdate -StartupType Disabled -Status Stopped
                 set-Service Gupdatem -StartupType Disabled -Status Stopped
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false
