@@ -141,13 +141,13 @@ $Script:CurrentScriptFullName = $MyInvocation.MyCommand.Path
 $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
 
 ##== Local Variables
-$SystemHostName = [System.Environment]::MachineName
-$SystemIPAddress = (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp).IPAddress
-$SystemOSversion = [System.Environment]::OSVersion.VersionString
-$SystemOSArchitectureIsX64 = [System.Environment]::Is64BitOperatingSystem
-$UserName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$UserIsAdmin = (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-$UserIsSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem 
+$Script:SystemHostName = [System.Environment]::MachineName
+$Script:SystemIPAddress = (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
+$Script:SystemOSversion = [System.Environment]::OSVersion.VersionString
+$Script:SystemOSArchitectureIsX64 = [System.Environment]::Is64BitOperatingSystem
+$Script:UserName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+$Script:UserIsAdmin = (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+$Script:UserIsSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem 
 
 
 ##== Functions
@@ -155,7 +155,7 @@ function Write-log
     {
          Param(
               [parameter()]
-              [String]$Path=$Global:log,
+              [String]$Path=$Script:log,
 
               [parameter(Position=0)]
               [String]$Message,
@@ -239,7 +239,7 @@ Function Get-GithubContent
                     }
                 Else
                     {
-                       Write-log "[ERROR] Unsupported URI $URI, Aborting !!!" -Type 3
+                       Write-Error "[ERROR] Unsupported URI $URI, Aborting !!!"
                        Return $false     
                     } 
 
@@ -251,9 +251,9 @@ Function Get-GithubContent
                     }
                 Catch
                     {
-                        Write-Log "[ERROR] Unable to get script content, Aborting !!!"  -Type 3
-                        Write-Log $Error[0].InvocationInfo.PositionMessage.ToString()  -Type 3
-                        Write-Log $Error[0].Exception.Message.ToString()  -Type 3
+                        Write-Error "[ERROR] Unable to get script content, Aborting !!!" 
+                        Write-Error $Error[0].InvocationInfo.PositionMessage.ToString()
+                        Write-Error $Error[0].Exception.Message.ToString()
                         $Fileraw = $False
                     }
                 
@@ -302,7 +302,6 @@ Function Get-GithubContent
                                                 # Get File
                                                 If (($File.Filename).ToUpper() -eq $ScriptName.ToUpper())
                                                     {
-                                                        Write-log "Downloading Gist script $($File.Filename)"
                                                         $rawURL = $File.raw_url
                                                         $fileraw = Invoke-RestMethod -Method Get -Uri $rawURL -WebSession $GITHUB
                                                         Return $fileraw  
@@ -320,6 +319,8 @@ Function Get-GithubContent
                                             [String]$Path
                                         )
 
+
+
                                         $myGithubRepos = Invoke-RestMethod -method Get -Uri $path -Headers $Headers -WebSession $GITHUB
 
 	                                    $files = $myGithubRepos | where {$_.type -eq "file"}
@@ -331,7 +332,6 @@ Function Get-GithubContent
                                             {
                                                 If (($File.Name).toUpper() -eq $ScriptName.ToUpper())
                                                     {
-                                                        Write-log "Downloading Gist script $($File.Name)"
                                                         $rawURL = $File.download_url
                                                         $fileraw = Invoke-RestMethod -Method Get -Uri $rawURL -WebSession $GITHUB
                                                         $fileraw
@@ -340,22 +340,22 @@ Function Get-GithubContent
                                             }
                                         Return
                                     }
-                          
+                                
                                 # Get my GItHub
                                 $SelectedFile = Explore-Repo -path "$($githubBaseURI)/repos/$($clientID)/$($GistID)/contents"
                                 Return $SelectedFile
                             }
                         Else
                             {
-                               Write-Log "[ERROR] Unsupported URI $URI, Aborting !!!" -Type 3
+                               Write-Error "[ERROR] Unsupported URI $URI, Aborting !!!"
                                Return $false  
                             }
                     }
                 Else
                     {
-                        Write-Log "[ERROR] Unable to authenticate to github, Aborting !!!" -Type 3 
-                        Write-Log $Error[0].InvocationInfo.PositionMessage.ToString()  -Type 3
-                        Write-Log $Error[0].Exception.Message.ToString()  -Type 3
+                        Write-Error "[ERROR] Unable to authenticate to github, Aborting !!!" 
+                        Write-Error $Error[0].InvocationInfo.PositionMessage.ToString()
+                        Write-Error $Error[0].Exception.Message.ToString()
                     }
             }
     }
@@ -460,7 +460,10 @@ Function Initialize-Prereq
 
 
 ##== Initializing Environement
-If ([string]::IsNullOrWhiteSpace($Log)){$Global:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_" + $Architecture + "_" + "Intaller.log")}
+If (-not [string]::IsNullOrWhiteSpace($Log))
+    {$Script:Log = $Log}
+Else    
+    {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_" + $Architecture + "_" + "Intaller.log")}
 
 $StartupTime = [DateTime]::Now
 Write-log 
@@ -491,8 +494,26 @@ If ($DisableUpdate -eq $true){Write-log "Install Option: Disabling update featur
 Initialize-Prereq
 
 ##== Download APP Data
-Get-GithubContent -
-
+Write-Log "Retriving data from Github for Application $Application"
+$AppDataCode = Get-GithubContent -URI "https://github.com/Diagg/EverGreen-Application-Installer/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$Application-Data.ps1"
+Try 
+    {
+        If ($AppDataCode -ne $False) 
+            {
+                $AppDataScriptPath = "$($env:temp)\Github-GoogleChrome-Data.ps1"
+                $AppDataCode|Out-File $AppDataScriptPath
+                ."$AppDataScriptPath"
+            } 
+        Else
+            {Write-log "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
+    }
+Catch 
+    {
+        Write-log "[Error] Unable to execute $Application data garthering, logical error occurs, Aborting !!!" -Type 3
+        Write-log $Error[0].InvocationInfo.PositionMessage.ToString() -type 3
+        Write-log $Error[0].Exception.Message.ToString() -type 3
+        Exit
+    }
 
 ##############################
 #### Pre-Script
@@ -510,7 +531,7 @@ If ($PreScriptURI -and $GithubToken)
 #### Application installation
 ##############################
 
-$Application = "Get-LatestAdobeReaderInstaller"
+
 $SeekApp = Find-Script -Name $Application -ErrorAction SilentlyContinue
 If (-not([String]::IsNullOrWhiteSpace($SeekApp)))
     {Install-Script $SeekApp -NoPathUpdate  -ErrorAction SilentlyContinue}

@@ -1,4 +1,4 @@
-﻿Function Get-AppInfo
+Function Get-AppInfo
     {
         [PSCustomObject]@{
             AppName = "GoogleChrome"
