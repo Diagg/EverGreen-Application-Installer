@@ -147,7 +147,8 @@ $Script:SystemOSversion = [System.Environment]::OSVersion.VersionString
 $Script:SystemOSArchitectureIsX64 = [System.Environment]::Is64BitOperatingSystem
 $Script:UserName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $Script:UserIsAdmin = (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-$Script:UserIsSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem 
+$Script:UserIsSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem
+$AppDownloadDir = "$env:Public\Downloads" 
 
 
 ##== Functions
@@ -503,6 +504,7 @@ Try
                 $AppDataScriptPath = "$($env:temp)\Github-GoogleChrome-Data.ps1"
                 $AppDataCode|Out-File $AppDataScriptPath
                 ."$AppDataScriptPath"
+                #Invoke-Expression $AppDataCode
             } 
         Else
             {Write-log "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
@@ -531,27 +533,92 @@ If ($PreScriptURI -and $GithubToken)
 #### Application installation
 ##############################
 
+##== Gather Informations
+$AppInfo = Get-AppInfo
+$AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
+$AppInfo = Get-AppInstallStatus $AppInfo
 
-$SeekApp = Find-Script -Name $Application -ErrorAction SilentlyContinue
-If (-not([String]::IsNullOrWhiteSpace($SeekApp)))
-    {Install-Script $SeekApp -NoPathUpdate  -ErrorAction SilentlyContinue}
-Else    
-    {Write-log "[Error] Unable to find $Application on PoweShell Gallery, Aborting !!!" -Type 3 ; Exit}
+If ($AppInfo.AppIsInstalled)
+    {Write-log "Version $($AppInfo.AppInstalledVersion) of $Application detected!"}
+Else
+    {Write-log "No Installed version of $Application detected!"}
 
 
-$AppInfo = Get-InstalledScript -Name $SeekApp.Name
-$Command = $(".\" + $AppInfo.Name + ".Ps1" + " -Log " + $Global:Log + " -Architecture " + $Architecture + " -DontPrecheck")
-$Command = $(".\Invoke-EverGreenGoogleChrome.ps1" + " -Log " + $Global:Log + " -Architecture " + $Architecture + " -DontPrecheck")
+If ($Uninstall -ne $true)
+    {
+        If ($AppInfo.AppIsInstalled -eq $False){$AppInstallNow = $true}
+        
+        ##==Check for latest version
+        $AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where Architecture -eq $Architecture
 
-If ($DisableUpdate) {$Command += " -DisableUpdate"}
-If ($Uninstall) {$Command += " -Uninstall"}        
+        ##==Check if we need to update
+        $AppUpdateStatus = Get-AppUpdateStatus -ObjAppInfo $AppInfo -GreenAppInfo $AppEverGreenInfo
+        If ($AppUpdateStatus)
+            {$AppInstallNow = $true ; Write-log "New version of $Application detected! Release version: $($AppEverGreenInfo.Version)"} 
+        Else 
+            {$AppInstallNow = $False ;Write-log "Version Available online is similar to installed version, Nothing to install !"} 
 
-Write-log "Launching command $Command"
+        ##==Download
+        Write-log "Found $Application - version: $($AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($AppEverGreenInfos.Date) available on Internet"
+        Write-log "Download Url: $($AppEverGreenInfo.uri)"
+        Write-log "Downloading installer for $Application - $Architecture"
 
-$CurrentLoc = Get-Location
-Set-Location $AppInfo.InstalledLocation
-Invoke-Expression -Command $Command
-Set-Location $currentLoc
+        if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
+            {
+                If (-not(Test-path $PreDownloadPath)){$Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue}
+                If ([string]::IsNullOrWhiteSpace($Iret)){Write-log "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
+                $AppDownloadDir = $PreDownloadPath
+            }
+
+        $AppInstaller = split-path $AppEverGreenInfo.uri -Leaf
+        Write-log "Download directory: $AppDownloadDir\$AppInstaller"  
+        $AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
+        
+        ##==Install
+        if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
+            {
+                If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+                    {
+                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $AppExtension.ToUpper()))
+                            {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
+                        Else
+                            {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
+                    }
+                Else
+                    {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
+            }
+
+        write-log "Installing $Application"
+        $Iret = (Start-Process $AppInfo.AppInstallCMD -ArgumentList $AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
+        If ($AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
+            {Write-log "Application $Application - version $($AppEverGreenInfo.version) Installed Successfully !!!"}
+        Else
+            {Write-log "[ERROR] Application $Application - version $($AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+
+   
+        ##== Remove Update capabilities
+        If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
+            {
+                Write-log "Disabling $Application update feature !"
+                Invoke-DisableUpdateCapability $AppInfo
+            }
+
+    }
+Else
+    {
+        If ($AppInfo.AppIsInstalled -eq $False){Write-log "Application $Application is not installed, nothing to uninstall ! All operation finished!!" ; Exit}
+        
+        ##== Uninstall
+        $Iret = (Start-Process $AppInfo.AppUninstallCMD -ArgumentList $AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
+        If ($AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
+            {Write-log "Application $Application - version $($AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
+        Else
+            {Write-log "[Warning] Application $Application - version $($AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
+
+        ##== Additionnal removal action
+        Invoke-AdditionalUninstall $AppInfo
+    }
+
 
 ##############################
 #### Post-Script
