@@ -10,6 +10,8 @@ Function Get-AppInfo
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallCMD = "MsiExec"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
+            AppUnInstallCMD = "MsiExec"
+            AppUnInstallParameters = "/x ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010)
             AppUninstallSuccessReturnCodes = @(0,3010)
         }
@@ -77,14 +79,15 @@ Function Invoke-AdditionalUninstall
             {
                  If (Test-Path $Folder)
                     {
-                        If ($UserIsSystem)
+                        If ($Script:TsEnv.CurrentUserIsSystem)
                             {Remove-Item $Folder -Force -Recurse|Out-Null}
                         Else
                             {Run-AsSystemNow -ScriptBlock {Remove-Item $Folder -Force -Recurse|Out-Null}}
                     }
             }
 
-        If (Test-Path ("$env:UserProfile\Desktop\Google Chrome.lnk")){Remove-Item "$env:UserProfile\Desktop\Google Chrome.lnk" -Force|Out-Null}
+        If (Test-Path ("$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk")){Remove-Item "$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk" -Force|Out-Null}
+        If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
     }
 
 

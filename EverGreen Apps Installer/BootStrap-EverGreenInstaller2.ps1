@@ -140,18 +140,29 @@ $Script:CurrentScriptName = $MyInvocation.MyCommand.Name
 $Script:CurrentScriptFullName = $MyInvocation.MyCommand.Path
 $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
 
-##== Local Variables
-$Script:SystemHostName = [System.Environment]::MachineName
-$Script:SystemIPAddress = (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
-$Script:SystemOSversion = [System.Environment]::OSVersion.VersionString
-$Script:SystemOSArchitectureIsX64 = [System.Environment]::Is64BitOperatingSystem
-$Script:UserName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$Script:UserIsAdmin = (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-$Script:UserIsSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem
+##== Environment Items
+$Script:TsEnv = New-Object PSObject
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value [System.Environment]::MachineName
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value [System.Environment]::OSVersion.VersionString
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX64' -Value [System.Environment]::Is64BitOperatingSystem
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUser' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsAdmin' -Value (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentUser).split("\")[1]
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentUser).split("\")[0]
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath' -Value "HKU:\$($Script:TsEnv.CurrentUserSID)" 
+
+
+##== Local Constantes
 $AppDownloadDir = "$env:Public\Downloads" 
 
 
 ##== Functions
+
+#region Functions
 function Write-log 
     {
          Param(
@@ -247,7 +258,7 @@ Function Get-GithubContent
                 
                 Try 
                     {
-                        $Fileraw = Invoke-WebRequest -URI $URI
+                        $Fileraw = Invoke-WebRequest -URI $URI -UseBasicParsing
                         $Fileraw = $fileraw.Content
                     }
                 Catch
@@ -458,7 +469,7 @@ Function Initialize-Prereq
         Catch
             {Write-log "[Error] Unable to install Evergreen, Aborting!!!" ; Exit}
     } 
-
+#endregion 
 
 ##== Initializing Environement
 If (-not [string]::IsNullOrWhiteSpace($Log))
@@ -476,13 +487,13 @@ Write-log "Selected Application: $Application"
 Write-log "Selected Application Architecture: $Architecture"
 Write-log "***************************************************************************************************"
 Write-log "Log Path: $log"
-Write-log "System Host Name: $SystemHostName"
-Write-log "System IP Address: $SystemIPAddress"
-Write-log "System OS version: $SystemOSversion"
-Write-log "System OS Architecture is x64: $SystemOSArchitectureIsX64"
-Write-Log "User Name: $UserName"
-Write-Log "User is Admin: $UserIsAdmin" 
-Write-Log "User is System: $UserIsSystem" 
+Write-log "System Host Name: $($Script:TsEnv.SystemHostName)"
+Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
+Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
+Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
+Write-Log "User Name: $($Script:TsEnv.CurrentUser)"
+Write-Log "User is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
+Write-Log "User is System: $($Script:TsEnv.CurrentUserIsSystem)" 
 
 
 
@@ -504,7 +515,6 @@ Try
                 $AppDataScriptPath = "$($env:temp)\Github-GoogleChrome-Data.ps1"
                 $AppDataCode|Out-File $AppDataScriptPath
                 ."$AppDataScriptPath"
-                #Invoke-Expression $AppDataCode
             } 
         Else
             {Write-log "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
@@ -559,7 +569,7 @@ If ($Uninstall -ne $true)
             {$AppInstallNow = $False ;Write-log "Version Available online is similar to installed version, Nothing to install !"} 
 
         ##==Download
-        Write-log "Found $Application - version: $($AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($AppEverGreenInfos.Date) available on Internet"
+        Write-log "Found $Application - version: $($AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($AppEverGreenInfo.Date) available on Internet"
         Write-log "Download Url: $($AppEverGreenInfo.uri)"
         Write-log "Downloading installer for $Application - $Architecture"
 
@@ -570,16 +580,23 @@ If ($Uninstall -ne $true)
                 $AppDownloadDir = $PreDownloadPath
             }
 
-        $AppInstaller = split-path $AppEverGreenInfo.uri -Leaf
-        Write-log "Download directory: $AppDownloadDir\$AppInstaller"  
-        $AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
-        
+        #$AppInstaller = split-path $AppEverGreenInfo.uri -Leaf
+        #Write-log "Download directory: $AppDownloadDir\$AppInstaller" 
+        If ([String]::IsNullOrWhiteSpace($InstallSourcePath))
+            {
+                $InstallSourcePath = $AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
+                $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
+
+            }
+        #$InstallSourcePath = $($InstallSourcePath.Path)
+        Write-log "Download directory: $InstallSourcePath" 
+
         ##==Install
         if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
             {
                 If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
                     {
-                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $AppExtension.ToUpper()))
+                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $AppInfo.AppExtension.ToUpper()))
                             {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
                         Else
                             {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
@@ -588,12 +605,18 @@ If ($Uninstall -ne $true)
                     {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
             }
 
-        write-log "Installing $Application"
+        write-log "Installing $Application with command $($AppInfo.AppInstallCMD) and parameters $($AppInfo.AppInstallParameters)"
         $Iret = (Start-Process $AppInfo.AppInstallCMD -ArgumentList $AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
         If ($AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
             {Write-log "Application $Application - version $($AppEverGreenInfo.version) Installed Successfully !!!"}
         Else
             {Write-log "[ERROR] Application $Application - version $($AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+
+        if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
+            {
+                Write-log "cleaning Download folder"
+                Remove-Item $InstallSourcePath -Force -ErrorAction SilentlyContinue
+            }
 
    
         ##== Remove Update capabilities
@@ -635,6 +658,6 @@ If ($PostScriptURI -and $GithubToken)
 $FinishTime = [DateTime]::Now
 Write-log "***************************************************************************************************"
 Write-log "Finished processing time: [$FinishTime]"
-Write-log "Migration duration: [$(($FinishTime - $StartupTime).ToString())]"
+Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
 Write-log "All Operations for $Application Finished!! Exit !"
 Write-log "***************************************************************************************************"    
