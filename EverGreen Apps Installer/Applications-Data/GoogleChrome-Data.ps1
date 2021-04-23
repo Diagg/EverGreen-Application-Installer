@@ -119,7 +119,7 @@ Function Invoke-DisableUpdateCapability
         If ($UserIsSystem)
             {$Iret = Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
         Else
-            {$Iret = Invoke-AsSystemNow -ScriptBlock $DisableUpdate_ScriptBlock}
+            {$Ire = Invoke-AsSystemNow -ScriptBlock $DisableUpdate_ScriptBlock}
 
 
         If (-Not (Test-path $Path1) -and (Test-path $Path2))
