@@ -10,8 +10,6 @@ Function Get-AppInfo
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallCMD = "MsiExec"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
-            AppUnInstallCMD = "MsiExec"
-            AppUnInstallParameters = "/x ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010)
             AppUninstallSuccessReturnCodes = @(0,3010)
         }
