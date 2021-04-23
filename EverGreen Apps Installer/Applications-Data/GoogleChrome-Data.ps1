@@ -29,7 +29,7 @@ Function Get-AppInstallStatus
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $AppRegUninstall.UninstallString
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $AppRegUninstall.DisplayVersion
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($ObjAppInfo.AppUninstallCommand).Split(" ")[0]
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb"
+                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb")
             }  
         Elseif (($null -ne (Get-ItemProperty "$($ObjAppInfo.AppDetection_X86)\*" | Where-Object { $_.DisplayName -eq $ObjAppInfo.AppInstallName })))
             {
@@ -39,7 +39,7 @@ Function Get-AppInstallStatus
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $AppRegUninstall.UninstallString
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $AppRegUninstall.DisplayVersion
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($ObjAppInfo.AppUninstallCommand).Split(" ")[0]
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb"
+                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb")
             }
         Else
             {
