@@ -96,6 +96,12 @@ param(
         "WinMerge","WinSCP","WixToolset","Zoom")]        
         [string]$Application,
 
+        [Parameter(ParameterSetName = 'Online')]
+        [Parameter(ParameterSetName = 'Offline')]
+        [Parameter(ParameterSetName = 'Predownload')]
+        [string]$GithubRepo = "https://github.com/Diagg/EverGreen-Application-Installer",
+
+
         [Parameter(ParameterSetName='Predownload', Mandatory = $true, Position = 0)]
         [string]$PreDownloadPath,
 
@@ -122,6 +128,8 @@ param(
         [switch]$Uninstall,
 
         [Parameter(ParameterSetName = 'Online')]
+        [Parameter(ParameterSetName = 'Offline')]
+        [Parameter(ParameterSetName = 'Predownload')]
         [string]$GithubToken,
 
         [Parameter(ParameterSetName = 'Online')]
@@ -142,11 +150,11 @@ $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
 
 ##== Environment Items
 $Script:TsEnv = New-Object PSObject
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value [System.Environment]::MachineName
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value ([System.Environment]::MachineName)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value [System.Environment]::OSVersion.VersionString
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX64' -Value [System.Environment]::Is64BitOperatingSystem
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUser' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value ([System.Environment]::OSVersion.VersionString)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX64' -Value ([System.Environment]::Is64BitOperatingSystem)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUser' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsAdmin' -Value (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentUser).split("\")[1]
@@ -475,7 +483,7 @@ Function Initialize-Prereq
 If (-not [string]::IsNullOrWhiteSpace($Log))
     {$Script:Log = $Log}
 Else    
-    {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_" + $Architecture + "_" + "Intaller.log")}
+    {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_"  + "Intaller.log")}
 
 $StartupTime = [DateTime]::Now
 Write-log 
@@ -507,7 +515,7 @@ Initialize-Prereq
 
 ##== Download APP Data
 Write-Log "Retriving data from Github for Application $Application"
-$AppDataCode = Get-GithubContent -URI "https://github.com/Diagg/EverGreen-Application-Installer/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$Application-Data.ps1"
+$AppDataCode = Get-GithubContent -URI "$GithubRepo/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$Application-Data.ps1"
 Try 
     {
         If ($AppDataCode -ne $False) 

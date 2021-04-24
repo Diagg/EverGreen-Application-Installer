@@ -31,7 +31,7 @@ Function Get-AppInstallStatus
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($ObjAppInfo.AppUninstallCommand).Split(" ")[0]
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb")
             }  
-        Elseif (($null -ne (Get-ItemProperty "$($ObjAppInfo.AppDetection_X86)\*" | Where-Object { $_.DisplayName -eq $ObjAppInfo.AppInstallName })))
+        Elseif (($null -ne ($AppRegUninstall = Get-ItemProperty "$($ObjAppInfo.AppDetection_X86)\*" | Where-Object { $_.DisplayName -like "*$($ObjAppInfo.AppInstallName)" })))
             {
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $true
                 $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value 'X86'
