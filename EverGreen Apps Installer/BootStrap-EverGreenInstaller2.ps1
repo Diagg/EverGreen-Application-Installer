@@ -283,6 +283,9 @@ Function Get-GithubContent
             {
                 ## This a private Repo/Gist
 
+
+
+
                 # Authenticate 
                 $clientID = $URI.split("/")[3]
                 $GistID = $URI.split("/")[4]
@@ -328,12 +331,15 @@ Function Get-GithubContent
                             }
                         ElseIf($URI -like '*/github.com*')
                             {
+
                                 Function Local:Explore-Repo
                                     {
                                         param (
                                             [Parameter( Position = 0, Mandatory = $True )]
                                             [String]$Path
                                         )
+
+
 
                                         $myGithubRepos = Invoke-RestMethod -method Get -Uri $path -Headers $Headers -WebSession $GITHUB
 
@@ -641,6 +647,7 @@ Else
             {Write-log "[Warning] Application $Application - version $($AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
 
         ##== Additionnal removal action
+        Write-log "Uninstalling addintionnal items !"
         Invoke-AdditionalUninstall $AppInfo
     }
 

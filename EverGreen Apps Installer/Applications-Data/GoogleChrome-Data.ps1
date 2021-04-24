@@ -75,6 +75,7 @@ Function Invoke-AdditionalUninstall
         $FolderList = @("C:\Program Files (x86)\Google", "C:\Program Files\Google")
         Foreach ($Folder in $FolderList)
             {
+                 Write-log "Removing $($objAppInfo.FriendlyName) Folder in Program Files Directory"
                  If (Test-Path $Folder)
                     {
                         If ($Script:TsEnv.CurrentUserIsSystem)
