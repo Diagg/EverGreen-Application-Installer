@@ -283,9 +283,6 @@ Function Get-GithubContent
             {
                 ## This a private Repo/Gist
 
-
-
-
                 # Authenticate 
                 $clientID = $URI.split("/")[3]
                 $GistID = $URI.split("/")[4]
@@ -331,15 +328,12 @@ Function Get-GithubContent
                             }
                         ElseIf($URI -like '*/github.com*')
                             {
-
                                 Function Local:Explore-Repo
                                     {
                                         param (
                                             [Parameter( Position = 0, Mandatory = $True )]
                                             [String]$Path
                                         )
-
-
 
                                         $myGithubRepos = Invoke-RestMethod -method Get -Uri $path -Headers $Headers -WebSession $GITHUB
 
@@ -492,7 +486,7 @@ Write-log "*********************************************************************
 Write-log "Started processing time: [$StartupTime]"
 Write-log "Script Name: $CurrentScriptName"
 Write-log "Selected Application: $Application"
-Write-log "Selected Application Architecture: $Architecture"
+If ($Uninstall -ne $true) {Write-log "Selected Application Architecture: $Architecture"}
 Write-log "***************************************************************************************************"
 Write-log "Log Path: $log"
 Write-log "System Host Name: $($Script:TsEnv.SystemHostName)"

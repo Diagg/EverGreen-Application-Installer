@@ -72,7 +72,7 @@ Function Invoke-AdditionalUninstall
     {
         Param([PsObject]$ObjAppInfo)
                 
-        $FolderList = @("C:\Program Files (x86)\Google\NOUpdate", "C:\Program Files (x86)\Google\Update", "C:\Program Files\Google\Update",  "C:\Program Files\Google\NOUpdate")
+        $FolderList = @("C:\Program Files (x86)\Google", "C:\Program Files\Google")
         Foreach ($Folder in $FolderList)
             {
                  If (Test-Path $Folder)
@@ -80,7 +80,7 @@ Function Invoke-AdditionalUninstall
                         If ($Script:TsEnv.CurrentUserIsSystem)
                             {Remove-Item $Folder -Force -Recurse|Out-Null}
                         Else
-                            {Run-AsSystemNow -ScriptBlock {Remove-Item $Folder -Force -Recurse|Out-Null}}
+                            {Invoke-AsSystemNow -ScriptBlock {Remove-Item $Folder -Force -Recurse|Out-Null}}
                     }
             }
 
