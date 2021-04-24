@@ -102,7 +102,7 @@ Function Invoke-DisableUpdateCapability
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false
             }
 
-        If ($ObjAppInfo.AppInstallArchitecture -eq 'X64')
+        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
             {
                 $Path1 = "C:\Program Files\Google\Update"
                 $Path2 = "C:\Program Files\Google\NOUpdate"
