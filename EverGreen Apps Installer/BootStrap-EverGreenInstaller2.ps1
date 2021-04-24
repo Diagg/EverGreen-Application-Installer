@@ -424,16 +424,24 @@ Function Invoke-AsSystemNow
 
 Function Initialize-Prereq
     {
+
+        Param(
+                [Parameter(Mandatory = $false)]
+                [switch]$NoModuleUpdate
+            )
+
+
+        ## Set Tls to 1.2
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+        ## Add Scripts path to $env:PSModulePath
+        $CurrentValue = [Environment]::GetEnvironmentVariable("PSModulePath", "Machine")
+        If ($CurrentValue -notlike "*C:\Program Files\WindowsPowerShell\scripts*") {[Environment]::SetEnvironmentVariable("PSModulePath", $CurrentValue + [System.IO.Path]::PathSeparator + "C:\Program Files\WindowsPowerShell\Scripts", "Machine")}
+
+        If ($NoModuleUpdate -eq $true){Return}
+
         Try 
             {
-                ## Set Tls to 1.2
-                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-                ## Add Scripts path to $env:PSModulePath
-                $CurrentValue = [Environment]::GetEnvironmentVariable("PSModulePath", "Machine")
-                If ($CurrentValue -notlike "*C:\Program Files\WindowsPowerShell\scripts*") {[Environment]::SetEnvironmentVariable("PSModulePath", $CurrentValue + [System.IO.Path]::PathSeparator + "C:\Program Files\WindowsPowerShell\Scripts", "Machine")}
-
-
                 ## install providers
                 If (-not(Test-path "C:\Program Files\PackageManagement\ProviderAssemblies\nuget\2.8.5.208\Microsoft.PackageManagement.NuGetProvider.dll"))
                     {
@@ -511,7 +519,8 @@ else{Write-log "Selected Action: Installation"}
 If ($DisableUpdate -eq $true){Write-log "Install Option: Disabling update feature"}
 
 ##== Init        
-Initialize-Prereq
+If ($Uninstall -eq $true){Initialize-Prereq -NoModuleUpdate}
+Else {Initialize-Prereq}
 
 ##== Download APP Data
 Write-Log "Retriving data from Github for Application $Application"
