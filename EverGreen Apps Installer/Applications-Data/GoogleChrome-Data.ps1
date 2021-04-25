@@ -1,4 +1,4 @@
-# Version 0.14
+# Version 0.15
 
 Function Get-AppInfo
     {
@@ -76,8 +76,14 @@ Function Invoke-AdditionalUninstall
         
         $UninstallFeature_ScriptBlock = { 
                 $FolderList = @("C:\Program Files (x86)\google", "C:\Program Files\google")
-                Foreach ($Folder in $FolderList){If (Test-Path $Folder){Get-childitem $folder -Recurse|Remove-Item -Force|Out-Null}}
-                If (Test-Path $Folder){Remove-Item $Folder -Force|Out-Null}
+                Foreach ($Folder in $FolderList)
+                    {
+                        If (Test-Path $Folder)
+                            {
+                                Get-childitem $folder|Remove-Item -Force -Confirm:$false -Recurse -ErrorAction SilentlyContinue
+                                Remove-Item $Folder -Force -ErrorAction SilentlyContinue|Out-Null
+                            }
+                    }
 
                 $CurrentUser = ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
                 $CurrentUserSID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
@@ -91,7 +97,7 @@ Function Invoke-AdditionalUninstall
         If ($Script:TsEnv.CurrentUserIsSystem)
             {Invoke-Command -ScriptBlock $UninstallFeature_ScriptBlock}
         Else
-            {Invoke-AsSystemNow -ScriptBlock $UninstallFeature_ScriptBlock}
+            {Invoke-AsSystemNow -ScriptBlock $UninstallFeature_ScriptBlock|Out-Null}
 
         If (Test-Path ("$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk")){Remove-Item "$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk" -Force|Out-Null}
         If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
@@ -123,19 +129,37 @@ Function Invoke-DisableUpdateCapability
                 set-Service Gupdatem -StartupType Disabled -Status Stopped
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false
+                sc.exe delete "GUpdate"
+                sc.exe delete "GUpdatem"
             }
 
         If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
             {
                 $Path1 = "C:\Program Files\Google\Update"
                 $Path2 = "C:\Program Files\Google\NOUpdate"
-                $AdditionalScriptBlock = {Rename-Item "C:\Program Files\Google\Update" -NewName "C:\Program Files\Google\NOUpdate" -Force}
+                $AdditionalScriptBlock = {
+                        $attempts = 1
+                        While (-not(Test-path "C:\Program Files\Google\NOUpdate") -and $attempts -le 15)
+                            {
+                                Rename-Item "C:\Program Files\Google\Update" -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
+                                Start-Sleep 1
+                                $attempts += 1                               
+                            }
+                    }
             }
         Else
             {
                 $Path1 = "C:\Program Files (x86)\Google\Update"
                 $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
-                $AdditionalScriptBlock = {Rename-Item "C:\Program Files (x86)\Google\Update" -NewName "C:\Program Files (x86)\Google\NOUpdate" -Force}
+                $AdditionalScriptBlock = {
+                        $attempts = 1
+                        While (-not(Test-path "C:\Program Files (x86)\Google\NOUpdate") -and $attempts -le 15)
+                            {
+                                Rename-Item "C:\Program Files (x86)\Google\Update" -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
+                                Start-Sleep 1
+                                $attempts += 1                               
+                            }
+                    }
             }
 
         $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $AdditionalScriptBlock.ToString())
