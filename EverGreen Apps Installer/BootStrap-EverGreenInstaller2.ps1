@@ -72,7 +72,7 @@ https://blog.darrenjrobinson.com/searching-and-retrieving-your-github-gists-usin
 
 
 Release date: 09/03/2021
-Version: 0.2
+Version: 0.11
 #>
 
 #Requires -Version 4

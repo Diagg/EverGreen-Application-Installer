@@ -1,3 +1,5 @@
+# Version 0.11
+
 Function Get-AppInfo
     {
         [PSCustomObject]@{
@@ -71,22 +73,34 @@ Function Get-AppUpdateStatus
 Function Invoke-AdditionalUninstall
     {
         Param([PsObject]$ObjAppInfo)
-                
-        $FolderList = @("C:\Program Files (x86)\google", "C:\Program Files\google")
-        Foreach ($Folder in $FolderList)
-            {
-                 Write-log "Removing $($objAppInfo.AppInstallName) Folder in $Folder"
-                 If (Test-Path $Folder)
-                    {
-                        If ($Script:TsEnv.CurrentUserIsSystem)
-                            {Remove-Item $Folder -Force -Recurse|Out-Null}
-                        Else
-                            {Invoke-AsSystemNow -ScriptBlock {Remove-Item $Folder -Force -Recurse|Out-Null}.GetNewClosure()}
-                    }
+        
+        $UninstallFeature_ScriptBlock = { 
+                $FolderList = @("C:\Program Files (x86)\google", "C:\Program Files\google")
+                Foreach ($Folder in $FolderList){If (Test-Path $Folder){Remove-Item $Folder -Force -Recurse|Out-Null}}
             }
+
+        If ($Script:TsEnv.CurrentUserIsSystem)
+            {Invoke-Command -ScriptBlock $UninstallFeature_ScriptBlock}
+        Else
+            {Invoke-AsSystemNow -ScriptBlock $UninstallFeature_ScriptBlock}
 
         If (Test-Path ("$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk")){Remove-Item "$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk" -Force|Out-Null}
         If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
+
+        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
+            {
+                If (-not(Test-path "C:\Program Files\google"))
+                    {Write-log "Successfully uninstalled additional componants  for $($ObjAppInfo.AppInstallName) !"}
+                Else
+                    {Write-log "[Error] Unable to uninstall additional componants for $($ObjAppInfo.AppInstallName) !" -Type 3} 
+            }
+        Else
+            {
+                If (-Not (Test-path "C:\Program Files (x86)\google") -and -not(Test-path "C:\Program Files\google"))
+                    {Write-log "Successfully uninstalled additional componants  for $($ObjAppInfo.AppInstallName) !"}
+                Else
+                    {Write-log "[Error] Unable to uninstall additional componants for $($ObjAppInfo.AppInstallName) !" -Type 3} 
+            }
     }
 
 
@@ -117,18 +131,15 @@ Function Invoke-DisableUpdateCapability
 
         $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $AdditionalScriptBlock.ToString())
         
-        If ($UserIsSystem)
+        If ($Script:TsEnv.CurrentUserIsSystem)
             {Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
         Else
             {Invoke-AsSystemNow -ScriptBlock $DisableUpdate_ScriptBlock}
 
 
         If (-Not (Test-path $Path1) -and (Test-path $Path2))
-            {Write-log "Update feature disabled successfully for $($ObjAppInfo.AppInstallName) !" ; Return $true}
+            {Write-log "Update feature disabled successfully for $($ObjAppInfo.AppInstallName) !"}
         Else
             {Write-log "[Error] Unable to remove Update feature for $($ObjAppInfo.AppInstallName) !" -Type 3} 
 
     }
-
-
-
