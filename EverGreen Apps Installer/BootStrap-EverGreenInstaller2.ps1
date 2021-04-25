@@ -633,7 +633,6 @@ If ($Uninstall -ne $true)
                 Write-log "Disabling $Application update feature !"
                 Invoke-DisableUpdateCapability $AppInfo
             }
-
     }
 Else
     {
