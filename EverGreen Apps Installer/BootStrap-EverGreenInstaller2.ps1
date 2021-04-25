@@ -557,12 +557,14 @@ $AppInfo = Get-AppInstallStatus $AppInfo
 If ($AppInfo.AppIsInstalled)
     {Write-log "Version $($AppInfo.AppInstalledVersion) of $Application detected!"}
 Else
-    {Write-log "No Installed version of $Application detected!"}
+    {
+        $AppInstallNow = $true
+        Write-log "No Installed version of $Application detected!"
+    }
 
 
 If ($Uninstall -ne $true)
     {
-        If ($AppInfo.AppIsInstalled -eq $False){$AppInstallNow = $true}
         If ($InstallSourcePath){$AppInstallNow = $true}
         
         ##==Check for latest version
@@ -571,15 +573,17 @@ If ($Uninstall -ne $true)
         ##==Check if we need to update
         $AppUpdateStatus = Get-AppUpdateStatus -ObjAppInfo $AppInfo -GreenAppInfo $AppEverGreenInfo
         If ($AppUpdateStatus)
-            {$AppInstallNow = $true ; Write-log "New version of $Application detected! Release version: $($AppEverGreenInfo.Version)"} 
+            {
+                $AppInstallNow = $true
+                Write-log "New version of $Application detected! Release version: $($AppEverGreenInfo.Version)"
+            } 
         Else 
-            {$AppInstallNow = $False ;Write-log "Version Available online is similar to installed version, Nothing to install !"} 
+            {
+                $AppInstallNow = $False
+                Write-log "Version Available online is similar to installed version, Nothing to install !"
+            } 
 
         ##==Download
-        Write-log "Found $Application - version: $($AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($AppEverGreenInfo.Date) available on Internet"
-        Write-log "Download Url: $($AppEverGreenInfo.uri)"
-        Write-log "Downloading installer for $Application - $Architecture"
-
         if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
             {
                 If (-not(Test-path $PreDownloadPath)){$Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue}
@@ -588,22 +592,23 @@ If ($Uninstall -ne $true)
                 $AppInstallNow = $False
             }
 
-        #$AppInstaller = split-path $AppEverGreenInfo.uri -Leaf
-        #Write-log "Download directory: $AppDownloadDir\$AppInstaller" 
-        If ([String]::IsNullOrWhiteSpace($InstallSourcePath))
+        If ([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True)
             {
+                Write-log "Found $Application - version: $($AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($AppEverGreenInfo.Date) available on Internet"
+                Write-log "Download Url: $($AppEverGreenInfo.uri)"
+                Write-log "Downloading installer for $Application - $Architecture"
+
                 $InstallSourcePath = $AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
                 $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
             }
-
-        #$InstallSourcePath = $($InstallSourcePath.Path)
-        Write-log "Download directory: $InstallSourcePath" 
-
+        
         ##==Install
         if ($AppInstallNow -eq $True)
             {
+                ## Rebuild Parametrers
                 If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
                     {
+                        Write-log "Download directory: $InstallSourcePath" 
                         If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $AppInfo.AppExtension.ToUpper()))
                             {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
                         Else
@@ -611,23 +616,25 @@ If ($Uninstall -ne $true)
                     }
                 Else
                     {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
+                
+                ## Execute Intall Program
+                write-log "Installing $Application with command $($AppInfo.AppInstallCMD) and parameters $($AppInfo.AppInstallParameters)"
+                $Iret = (Start-Process $AppInfo.AppInstallCMD -ArgumentList $AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
+                If ($AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
+                    {Write-log "Application $Application - version $($AppEverGreenInfo.version) Installed Successfully !!!"}
+                Else
+                    {Write-log "[ERROR] Application $Application - version $($AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+
+                ## Clean Download Folder
+                if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
+                    {
+                        Write-log "cleaning Download folder"
+                        Remove-Item $InstallSourcePath -Force -ErrorAction SilentlyContinue
+                    }
             }
 
-        write-log "Installing $Application with command $($AppInfo.AppInstallCMD) and parameters $($AppInfo.AppInstallParameters)"
-        $Iret = (Start-Process $AppInfo.AppInstallCMD -ArgumentList $AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
-        If ($AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
-            {Write-log "Application $Application - version $($AppEverGreenInfo.version) Installed Successfully !!!"}
-        Else
-            {Write-log "[ERROR] Application $Application - version $($AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
-
-        if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
-            {
-                Write-log "cleaning Download folder"
-                Remove-Item $InstallSourcePath -Force -ErrorAction SilentlyContinue
-            }
-
-   
-        ##== Remove Update capabilities
+ 
+         ##== Remove Update capabilities
         If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
             {
                 Write-log "Disabling $Application update feature !"
@@ -661,7 +668,6 @@ If ($PostScriptURI -and $GithubToken)
         Try {Invoke-Command $PostScript}
         Catch {Write-log "[Error] Postscript Failed to execute" -Type 3}
     }
-
 
 $FinishTime = [DateTime]::Now
 Write-log "***************************************************************************************************"

@@ -81,7 +81,7 @@ Function Invoke-AdditionalUninstall
                         If ($Script:TsEnv.CurrentUserIsSystem)
                             {Remove-Item $Folder -Force -Recurse|Out-Null}
                         Else
-                            {Invoke-AsSystemNow -ScriptBlock {Remove-Item $using:Folder -Force -Recurse|Out-Null}}
+                            {Invoke-AsSystemNow -ScriptBlock {Remove-Item $Folder -Force -Recurse|Out-Null}.GetNewClosure()}
                     }
             }
 
