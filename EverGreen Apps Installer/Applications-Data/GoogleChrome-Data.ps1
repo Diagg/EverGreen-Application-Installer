@@ -1,4 +1,4 @@
-# Version 0.15
+# Version 0.17
 
 Function Get-AppInfo
     {
@@ -75,14 +75,10 @@ Function Invoke-AdditionalUninstall
         Param([PsObject]$ObjAppInfo)
         
         $UninstallFeature_ScriptBlock = { 
-                $FolderList = @("C:\Program Files (x86)\google", "C:\Program Files\google")
+                $FolderList = @("C:\Program Files\google","C:\Program Files (x86)\google")
                 Foreach ($Folder in $FolderList)
                     {
-                        If (Test-Path $Folder)
-                            {
-                                Get-childitem $folder|Remove-Item -Force -Confirm:$false -Recurse -ErrorAction SilentlyContinue
-                                Remove-Item $Folder -Force -ErrorAction SilentlyContinue|Out-Null
-                            }
+                        If (Test-Path $Folder){Get-childitem $folder|Remove-Item -Force -Confirm:$false -Recurse -ErrorAction SilentlyContinue}
                     }
 
                 $CurrentUser = ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
@@ -111,7 +107,7 @@ Function Invoke-AdditionalUninstall
             }
         Else
             {
-                If (-Not (Test-path "C:\Program Files (x86)\google") -and -not(Test-path "C:\Program Files\google"))
+                If (-Not (Test-path "C:\Program Files (x86)\google\*") -and -not(Test-path "C:\Program Files\google"))
                     {Write-log "Successfully uninstalled additional componants  for $($ObjAppInfo.AppInstallName) !"}
                 Else
                     {Write-log "[Error] Unable to uninstall additional componants for $($ObjAppInfo.AppInstallName) !" -Type 3} 
