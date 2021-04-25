@@ -72,7 +72,7 @@ https://blog.darrenjrobinson.com/searching-and-retrieving-your-github-gists-usin
 
 
 Release date: 09/03/2021
-Version: 0.11
+Version: 0.14
 #>
 
 #Requires -Version 4
@@ -160,7 +160,7 @@ $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -V
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentUser).split("\")[1]
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentUser).split("\")[0]
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $Script:TsEnv.CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath' -Value "HKU:\$($Script:TsEnv.CurrentUserSID)" 
 
 

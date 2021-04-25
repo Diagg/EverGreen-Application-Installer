@@ -1,4 +1,4 @@
-# Version 0.11
+# Version 0.14
 
 Function Get-AppInfo
     {
@@ -76,7 +76,16 @@ Function Invoke-AdditionalUninstall
         
         $UninstallFeature_ScriptBlock = { 
                 $FolderList = @("C:\Program Files (x86)\google", "C:\Program Files\google")
-                Foreach ($Folder in $FolderList){If (Test-Path $Folder){Remove-Item $Folder -Force -Recurse|Out-Null}}
+                Foreach ($Folder in $FolderList){If (Test-Path $Folder){Get-childitem $folder -Recurse|Remove-Item -Force|Out-Null}}
+                If (Test-Path $Folder){Remove-Item $Folder -Force|Out-Null}
+
+                $CurrentUser = ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
+                $CurrentUserSID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
+                $CurrentUserProfilePath = (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
+                
+                If (Test-Path ("$CurrentUserProfilePath\Desktop\Google Chrome.lnk")){Remove-Item "$CurrentUserProfilePath\Desktop\Google Chrome.lnk" -Force|Out-Null}
+                If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
+
             }
 
         If ($Script:TsEnv.CurrentUserIsSystem)
