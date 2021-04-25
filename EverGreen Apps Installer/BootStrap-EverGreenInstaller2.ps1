@@ -72,7 +72,7 @@ https://blog.darrenjrobinson.com/searching-and-retrieving-your-github-gists-usin
 
 
 Release date: 09/03/2021
-Version: 0.14
+Version: 0.16
 #>
 
 #Requires -Version 4
@@ -550,9 +550,9 @@ If ($PreScriptURI -and $GithubToken)
 ##############################
 
 ##== Gather Informations
-$AppInfo = Get-AppInfo
-$AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
-$AppInfo = Get-AppInstallStatus $AppInfo
+$Script:AppInfo = Get-AppInfo
+$Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
+Get-AppInstallStatus
 
 If ($AppInfo.AppIsInstalled)
     {Write-log "Version $($AppInfo.AppInstalledVersion) of $Application detected!"}
@@ -568,14 +568,14 @@ If ($Uninstall -ne $true)
         If ($InstallSourcePath){$AppInstallNow = $true}
         
         ##==Check for latest version
-        $AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
+        $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
 
         ##==Check if we need to update
-        $AppUpdateStatus = Get-AppUpdateStatus -ObjAppInfo $AppInfo -GreenAppInfo $AppEverGreenInfo
+        $AppUpdateStatus = Get-AppUpdateStatus -ObjAppInfo $AppInfo -GreenAppInfo $Script:AppEverGreenInfo
         If ($AppUpdateStatus)
             {
                 $AppInstallNow = $true
-                Write-log "New version of $Application detected! Release version: $($AppEverGreenInfo.Version)"
+                Write-log "New version of $Application detected! Release version: $($Script:AppEverGreenInfo.Version)"
             } 
         Else 
             {
@@ -594,11 +594,11 @@ If ($Uninstall -ne $true)
 
         If ([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True)
             {
-                Write-log "Found $Application - version: $($AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($AppEverGreenInfo.Date) available on Internet"
-                Write-log "Download Url: $($AppEverGreenInfo.uri)"
+                Write-log "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
+                Write-log "Download Url: $($Script:AppEverGreenInfo.uri)"
                 Write-log "Downloading installer for $Application - $Architecture"
 
-                $InstallSourcePath = $AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
+                $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
                 $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
             }
         
@@ -621,9 +621,9 @@ If ($Uninstall -ne $true)
                 write-log "Installing $Application with command $($AppInfo.AppInstallCMD) and parameters $($AppInfo.AppInstallParameters)"
                 $Iret = (Start-Process $AppInfo.AppInstallCMD -ArgumentList $AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
                 If ($AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
-                    {Write-log "Application $Application - version $($AppEverGreenInfo.version) Installed Successfully !!!"}
+                    {Write-log "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"}
                 Else
-                    {Write-log "[ERROR] Application $Application - version $($AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+                    {Write-log "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
 
                 ## Clean Download Folder
                 if ([String]::IsNullOrWhiteSpace($PreDownloadPath))

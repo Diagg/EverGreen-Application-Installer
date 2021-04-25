@@ -1,4 +1,4 @@
-# Version 0.17
+# Version 0.18
 
 Function Get-AppInfo
     {
@@ -20,50 +20,44 @@ Function Get-AppInfo
 
 Function Get-AppInstallStatus
     {
-        Param([PsObject]$ObjAppInfo)
-
         ##== Check if Application is Already installed 
-        If (($null -ne ($AppRegUninstall = Get-ItemProperty "$($ObjAppInfo.AppDetection_X64)\*" | Where-Object { $_.DisplayName -like "*$($ObjAppInfo.AppInstallName)" })))
+        If (($null -ne ($AppRegUninstall = Get-ItemProperty "$($Script:AppInfo.AppDetection_X64)\*" | Where-Object { $_.DisplayName -like "*$($Script:AppInfo.AppInstallName)" })))
             {
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $true
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value 'X64'
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppDetection' -Value $AppRegUninstall.PsPath
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $AppRegUninstall.UninstallString
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $AppRegUninstall.DisplayVersion
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($ObjAppInfo.AppUninstallCommand).Split(" ")[0]
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb")
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $true
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value 'X64'
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppDetection' -Value $AppRegUninstall.PsPath
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $AppRegUninstall.UninstallString
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $AppRegUninstall.DisplayVersion
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($Script:AppInfo.AppUninstallCommand).Split(" ")[0]
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($Script:AppInfo.AppUninstallCommand).Replace($Script:AppInfo.AppUninstallCMD, "").trim() + " /qb")
             }  
-        Elseif (($null -ne ($AppRegUninstall = Get-ItemProperty "$($ObjAppInfo.AppDetection_X86)\*" | Where-Object { $_.DisplayName -like "*$($ObjAppInfo.AppInstallName)" })))
+        Elseif (($null -ne ($AppRegUninstall = Get-ItemProperty "$($Script:AppInfo.AppDetection_X86)\*" | Where-Object { $_.DisplayName -like "*$($Script:AppInfo.AppInstallName)" })))
             {
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $true
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value 'X86'
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppDetection' -Value $AppRegUninstall.PsPath
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $AppRegUninstall.UninstallString
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $AppRegUninstall.DisplayVersion
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($ObjAppInfo.AppUninstallCommand).Split(" ")[0]
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($ObjAppInfo.AppUninstallCommand).Replace($ObjAppInfo.AppUninstallCMD, "").trim() + " /qb")
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $true
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value 'X86'
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppDetection' -Value $AppRegUninstall.PsPath
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $AppRegUninstall.UninstallString
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $AppRegUninstall.DisplayVersion
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $($Script:AppInfo.AppUninstallCommand).Split(" ")[0]
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $(($Script:AppInfo.AppUninstallCommand).Replace($Script:AppInfo.AppUninstallCMD, "").trim() + " /qb")
             }
         Else
             {
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $false
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value $null
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppDetection' -Value $null
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $null
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $null
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $null
-                $ObjAppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $null
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppIsInstalled' -Value $false
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppArchitecture' -Value $null
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppDetection' -Value $null
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCommand' -Value $null
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstalledVersion' -Value $null
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallCMD' -Value $null
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppUninstallParameters' -Value $null
             }
-
-        Return $ObjAppInfo
     } 
 
 
 Function Get-AppUpdateStatus
     {    
-        Param([PsObject]$ObjAppInfo,[PsObject]$GreenAppInfo )
-
         # Return $True if the application need to updated
-        If ([version]($GreenAppInfo.Version) -gt [version]$ObjAppInfo.AppInstalledVersion)
+        If ([version]($Script:AppEverGreenInfo.Version) -gt [version]$Script:AppInfo.AppInstalledVersion)
             {Return $True}
         Else        
             {Return $False}
@@ -72,8 +66,6 @@ Function Get-AppUpdateStatus
 
 Function Invoke-AdditionalUninstall
     {
-        Param([PsObject]$ObjAppInfo)
-        
         $UninstallFeature_ScriptBlock = { 
                 $FolderList = @("C:\Program Files\google","C:\Program Files (x86)\google")
                 Foreach ($Folder in $FolderList)
@@ -98,27 +90,25 @@ Function Invoke-AdditionalUninstall
         If (Test-Path ("$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk")){Remove-Item "$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk" -Force|Out-Null}
         If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
 
-        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
+        If ($Script:AppInfo.AppInstallArchitecture -eq 'X86')
             {
                 If (-not(Test-path "C:\Program Files\google"))
-                    {Write-log "Successfully uninstalled additional componants  for $($ObjAppInfo.AppInstallName) !"}
+                    {Write-log "Successfully uninstalled additional componants  for $($Script:AppInfo.AppInstallName) !"}
                 Else
-                    {Write-log "[Error] Unable to uninstall additional componants for $($ObjAppInfo.AppInstallName) !" -Type 3} 
+                    {Write-log "[Error] Unable to uninstall additional componants for $($Script:AppInfo.AppInstallName) !" -Type 3} 
             }
         Else
             {
                 If (-Not (Test-path "C:\Program Files (x86)\google\*") -and -not(Test-path "C:\Program Files\google"))
-                    {Write-log "Successfully uninstalled additional componants  for $($ObjAppInfo.AppInstallName) !"}
+                    {Write-log "Successfully uninstalled additional componants  for $($Script:AppInfo.AppInstallName) !"}
                 Else
-                    {Write-log "[Error] Unable to uninstall additional componants for $($ObjAppInfo.AppInstallName) !" -Type 3} 
+                    {Write-log "[Error] Unable to uninstall additional componants for $($Script:AppInfo.AppInstallName) !" -Type 3} 
             }
     }
 
 
 Function Invoke-DisableUpdateCapability
     {
-        Param([PsObject]$ObjAppInfo)
-        
         $DisableUpdate_ScriptBlock = { 
                 set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped
                 set-Service Gupdate -StartupType Disabled -Status Stopped
@@ -129,7 +119,7 @@ Function Invoke-DisableUpdateCapability
                 sc.exe delete "GUpdatem"
             }
 
-        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
+        If ($Script:AppInfo.AppInstallArchitecture -eq 'X86')
             {
                 $Path1 = "C:\Program Files\Google\Update"
                 $Path2 = "C:\Program Files\Google\NOUpdate"
@@ -167,8 +157,8 @@ Function Invoke-DisableUpdateCapability
 
 
         If (-Not (Test-path $Path1) -and (Test-path $Path2))
-            {Write-log "Update feature disabled successfully for $($ObjAppInfo.AppInstallName) !"}
+            {Write-log "Update feature disabled successfully for $($Script:AppInfo.AppInstallName) !"}
         Else
-            {Write-log "[Error] Unable to remove Update feature for $($ObjAppInfo.AppInstallName) !" -Type 3} 
+            {Write-log "[Error] Unable to remove Update feature for $($Script:AppInfo.AppInstallName) !" -Type 3} 
 
     }
