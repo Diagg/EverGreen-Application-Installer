@@ -330,8 +330,8 @@ Function Get-GithubContent
 
                                         $myGithubRepos = Invoke-RestMethod -method Get -Uri $path -Headers $Headers -WebSession $GITHUB
 
-	                                    $files = $myGithubRepos | where {$_.type -eq "file"}
-	                                    $directories = $myGithubRepos | where {$_.type -eq "dir"}
+	                                    $files = $myGithubRepos | Where-Object {$_.type -eq "file"}
+	                                    $directories = $myGithubRepos | Where-Object {$_.type -eq "dir"}
 
                                         $directories | ForEach-Object {Explore-Repo -path ($_._links).self}
         
@@ -566,7 +566,7 @@ If ($Uninstall -ne $true)
         If ($InstallSourcePath){$AppInstallNow = $true}
         
         ##==Check for latest version
-        $AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where Architecture -eq $Architecture
+        $AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
 
         ##==Check if we need to update
         $AppUpdateStatus = Get-AppUpdateStatus -ObjAppInfo $AppInfo -GreenAppInfo $AppEverGreenInfo
