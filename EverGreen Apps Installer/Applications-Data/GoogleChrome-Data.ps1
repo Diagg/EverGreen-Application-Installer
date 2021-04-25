@@ -87,6 +87,22 @@ Function Invoke-AdditionalUninstall
 
         If (Test-Path ("$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk")){Remove-Item "$($Script:TsEnv.CurrentUserProfilePath)\Desktop\Google Chrome.lnk" -Force|Out-Null}
         If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
+
+        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
+            {
+                If (-Not (Test-path "C:\Program Files\google"))
+                    {Write-log "Successfully uninstalled additional composant for $($ObjAppInfo.AppInstallName) !" ; Return $true}
+                Else
+                    {Write-log "[Error] Unable to uninstall additional composant for $($ObjAppInfo.AppInstallName) !" -Type 3}            
+            }
+        Else
+            {
+       
+                If (-Not (Test-path "C:\Program Files (x86)\google") -and -Not (Test-path "C:\Program Files\google"))
+                    {Write-log "Successfully uninstalled additional composant for $($ObjAppInfo.AppInstallName) !" ; Return $true}
+                Else
+                    {Write-log "[Error] Unable to uninstall additional composant for $($ObjAppInfo.AppInstallName) !" -Type 3}
+            } 
     }
 
 
@@ -94,29 +110,29 @@ Function Invoke-DisableUpdateCapability
     {
         Param([PsObject]$ObjAppInfo)
         
+
+        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
+            {
+                $Path1 = "C:\Program Files\Google\Update"
+                $Path2 = "C:\Program Files\Google\NOUpdate"
+            }
+        Else
+            {
+                $Path1 = "C:\Program Files (x86)\Google\Update"
+                $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
+            }
+
+
         $DisableUpdate_ScriptBlock = { 
                 set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped
                 set-Service Gupdate -StartupType Disabled -Status Stopped
                 set-Service Gupdatem -StartupType Disabled -Status Stopped
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false
+                Rename-Item $using:Path1 -NewName $using:Path2 -Force
             }
 
-        If ($ObjAppInfo.AppInstallArchitecture -eq 'X86')
-            {
-                $Path1 = "C:\Program Files\Google\Update"
-                $Path2 = "C:\Program Files\Google\NOUpdate"
-                $AdditionalScriptBlock = {Rename-Item "C:\Program Files\Google\Update" -NewName "C:\Program Files\Google\NOUpdate" -Force}
-            }
-        Else
-            {
-                $Path1 = "C:\Program Files (x86)\Google\Update"
-                $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
-                $AdditionalScriptBlock = {Rename-Item "C:\Program Files (x86)\Google\Update" -NewName "C:\Program Files (x86)\Google\NOUpdate" -Force}
-            }
 
-        $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $AdditionalScriptBlock.ToString())
-        
         If ($UserIsSystem)
             {$Iret = Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
         Else

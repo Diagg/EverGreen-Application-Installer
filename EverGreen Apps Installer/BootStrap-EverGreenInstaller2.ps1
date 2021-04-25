@@ -220,19 +220,6 @@ Function Get-GithubContent
             [string]$ScriptName
          )
         
-        <#
-         If ($PreScriptURI)
-            {
-                $URI = $PreScriptURI
-                $ScriptName = 'Pre-Script.ps1'
-            } 
-        Else 
-            {
-                $URI = $PostScriptURI
-                $ScriptName = 'Post-Script.ps1'                
-            }
-        #>
-
         If([string]::IsNullOrWhiteSpace($GithubToken))
             {
                 ## This a public Repo/Gist
@@ -399,6 +386,7 @@ Function Invoke-AsSystemNow
         Register-ScheduledJob -Name $taskName  -Trigger $trigger  -ScheduledJobOption $options -ScriptBlock $ScriptBlock|Out-Null
         $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount  -RunLevel Highest
         Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
+        Write-log "Starting Scheduled scriptblock with name $TaskName as System Account"
         Start-Job -DefinitionName $taskName|Out-Null
 
         $attempts = 1
@@ -410,6 +398,7 @@ Function Invoke-AsSystemNow
 
         If ((get-job -Name $taskname).State -eq "Completed")
             {
+                Write-log "Scheduled scriptblock with name $TaskName completed successfully !"
                 Unregister-ScheduledJob $TaskName -Confirm:$false
                 Return $true
             }
