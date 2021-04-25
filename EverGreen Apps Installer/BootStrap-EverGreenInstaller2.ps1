@@ -563,6 +563,7 @@ Else
 If ($Uninstall -ne $true)
     {
         If ($AppInfo.AppIsInstalled -eq $False){$AppInstallNow = $true}
+        If ($InstallSourcePath){$AppInstallNow = $true}
         
         ##==Check for latest version
         $AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where Architecture -eq $Architecture
@@ -584,6 +585,7 @@ If ($Uninstall -ne $true)
                 If (-not(Test-path $PreDownloadPath)){$Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue}
                 If ([string]::IsNullOrWhiteSpace($Iret)){Write-log "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
                 $AppDownloadDir = $PreDownloadPath
+                $AppInstallNow = $False
             }
 
         #$AppInstaller = split-path $AppEverGreenInfo.uri -Leaf
@@ -592,13 +594,13 @@ If ($Uninstall -ne $true)
             {
                 $InstallSourcePath = $AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
                 $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
-
             }
+
         #$InstallSourcePath = $($InstallSourcePath.Path)
         Write-log "Download directory: $InstallSourcePath" 
 
         ##==Install
-        if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
+        if ($AppInstallNow -eq $True)
             {
                 If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
                     {
