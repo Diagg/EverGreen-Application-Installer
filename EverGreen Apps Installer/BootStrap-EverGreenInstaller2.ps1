@@ -154,13 +154,14 @@ $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value 
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value ([System.Environment]::OSVersion.VersionString)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX64' -Value ([System.Environment]::Is64BitOperatingSystem)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUser' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -Value (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserExecutionContext' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsAdmin' -Value (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsTrustedInstaller' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464")
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentUser).split("\")[1]
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentUser).split("\")[0]
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[1]
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[0]
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentLoggedOnUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $Script:TsEnv.CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath' -Value "HKU:\$($Script:TsEnv.CurrentUserSID)" 
 
@@ -996,10 +997,10 @@ Write-log "System Host Name: $($Script:TsEnv.SystemHostName)"
 Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
 Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
 Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
-Write-Log "User Name: $($Script:TsEnv.CurrentUser)"
-Write-Log "User is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
-Write-Log "User is System: $($Script:TsEnv.CurrentUserIsSystem)"
-Write-Log "User is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
+Write-Log "Logged on user: $($Script:TsEnv.CurrentLoggedOnUser)"
+Write-Log "Exec. Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
+Write-Log "Exec. Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
+Write-Log "Exec. Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
 
 
 
