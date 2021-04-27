@@ -1085,6 +1085,7 @@ If ($Uninstall -ne $true)
                 Write-log "Version Available online is similar to installed version, Nothing to install !"
             } 
 
+
         ##==Download
         if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
             {
@@ -1103,9 +1104,10 @@ If ($Uninstall -ne $true)
                 $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
                 $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
             }
+
         
-         ##== Uninstall before Update if requiered
-        If ($Script:AppInfo.AppIsInstalled -eq $True -and $Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true)
+        ##== Uninstall before Update if requiered
+        If (($Script:AppInfo.AppIsInstalled -eq $True -and $Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
             {
                 ##== Uninstall
                 $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
@@ -1118,7 +1120,6 @@ If ($Uninstall -ne $true)
                 Write-log "Uninstalling addintionnal items before reinstall/Update !"
                 Invoke-AdditionalUninstall
             }
-
 
 
         ##==Install

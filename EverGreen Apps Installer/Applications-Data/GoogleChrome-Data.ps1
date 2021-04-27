@@ -15,6 +15,7 @@ Function Get-AppInfo
             AppInstallSuccessReturnCodes = @(0,3010)
             AppUninstallSuccessReturnCodes = @(0,3010)
             AppMustUninstallBeforeUpdate = $false
+            AppMustUninstallOnArchChange = $true
         }
     }
 
@@ -76,7 +77,7 @@ Function Invoke-AdditionalUninstall
                         If (Test-Path $Folder){Get-childitem $folder|Remove-Item -Force -Confirm:$false -Recurse -ErrorAction SilentlyContinue}
                     }
 
-                $CurrentUser = (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
+                $CurrentUser = $(Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
                 $CurrentUserSID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
                 $CurrentUserProfilePath = (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
                 
