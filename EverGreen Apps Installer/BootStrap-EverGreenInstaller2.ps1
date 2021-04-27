@@ -489,7 +489,7 @@ Function Invoke-AsCurrentUser
             [ValidateSet("x86","x64","X86","X64")]
             [String]$Architecture = "x64",
             [Parameter(Mandatory = $false)]
-            [switch]$UseWindowsPowerShell = $true,
+            [switch]$UseWindowsPowerShell,
             [Parameter(Mandatory = $false)]
             [switch]$NonElevatedSession,
             [Parameter(Mandatory = $false)]
