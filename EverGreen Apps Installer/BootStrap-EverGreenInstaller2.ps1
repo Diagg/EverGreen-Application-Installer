@@ -72,10 +72,10 @@ https://blog.darrenjrobinson.com/searching-and-retrieving-your-github-gists-usin
 
 
 Release date: 09/03/2021
-Version: 0.16
+Version: 0.17
 #>
 
-#Requires -Version 4
+#Requires -Version 5
 #Requires -RunAsAdministrator 
 
 [CmdletBinding()]
@@ -157,6 +157,7 @@ $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUser' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsAdmin' -Value (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)
+$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsTrustedInstaller' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464")
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentUser).split("\")[1]
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentUser).split("\")[0]
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
@@ -269,9 +270,6 @@ Function Get-GithubContent
         Else
             {
                 ## This a private Repo/Gist
-
-
-
 
                 # Authenticate 
                 $clientID = $URI.split("/")[3]
@@ -473,7 +471,509 @@ Function Initialize-Prereq
             }
         Catch
             {Write-log "[Error] Unable to install Evergreen, Aborting!!!" ; Exit}
-    } 
+    }
+
+
+Function Invoke-AsCurrentUser
+    {
+        
+        [CmdletBinding()]
+        param (
+            [Parameter(Mandatory = $true)]
+            [scriptblock]$ScriptBlock,
+            [Parameter(Mandatory = $false)]
+            [String]$ScriptBlockLog = $Script:log,
+            [Parameter(Mandatory = $false)]
+            [switch]$NoWait,
+            [Parameter(Mandatory = $false)]
+            [ValidateSet("x86","x64","X86","X64")]
+            [String]$Architecture = "x64",
+            [Parameter(Mandatory = $false)]
+            [switch]$UseWindowsPowerShell = $true,
+            [Parameter(Mandatory = $false)]
+            [switch]$NonElevatedSession,
+            [Parameter(Mandatory = $false)]
+            [switch]$Visible,
+            [Parameter(Mandatory = $false)]
+            [switch]$CacheToDisk
+        )        
+        
+
+        $Source = @"
+        using Microsoft.Win32.SafeHandles;
+        using System;
+        using System.Runtime.InteropServices;
+        using System.Text;
+        namespace RunAsUser
+        {
+            internal class NativeHelpers
+            {
+                [StructLayout(LayoutKind.Sequential)]
+                public struct PROCESS_INFORMATION
+                {
+                    public IntPtr hProcess;
+                    public IntPtr hThread;
+                    public int dwProcessId;
+                    public int dwThreadId;
+                }
+                [StructLayout(LayoutKind.Sequential)]
+                public struct STARTUPINFO
+                {
+                    public int cb;
+                    public String lpReserved;
+                    public String lpDesktop;
+                    public String lpTitle;
+                    public uint dwX;
+                    public uint dwY;
+                    public uint dwXSize;
+                    public uint dwYSize;
+                    public uint dwXCountChars;
+                    public uint dwYCountChars;
+                    public uint dwFillAttribute;
+                    public uint dwFlags;
+                    public short wShowWindow;
+                    public short cbReserved2;
+                    public IntPtr lpReserved2;
+                    public IntPtr hStdInput;
+                    public IntPtr hStdOutput;
+                    public IntPtr hStdError;
+                }
+                [StructLayout(LayoutKind.Sequential)]
+                public struct WTS_SESSION_INFO
+                {
+                    public readonly UInt32 SessionID;
+                    [MarshalAs(UnmanagedType.LPStr)]
+                    public readonly String pWinStationName;
+                    public readonly WTS_CONNECTSTATE_CLASS State;
+                }
+            }
+            internal class NativeMethods
+            {
+                [DllImport("kernel32", SetLastError=true)]
+                public static extern int WaitForSingleObject(
+                  IntPtr hHandle,
+                  int dwMilliseconds);
+                [DllImport("kernel32.dll", SetLastError = true)]
+                public static extern bool CloseHandle(
+                    IntPtr hSnapshot);
+                [DllImport("userenv.dll", SetLastError = true)]
+                public static extern bool CreateEnvironmentBlock(
+                    ref IntPtr lpEnvironment,
+                    SafeHandle hToken,
+                    bool bInherit);
+                [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+                public static extern bool CreateProcessAsUserW(
+                    SafeHandle hToken,
+                    String lpApplicationName,
+                    StringBuilder lpCommandLine,
+                    IntPtr lpProcessAttributes,
+                    IntPtr lpThreadAttributes,
+                    bool bInheritHandle,
+                    uint dwCreationFlags,
+                    IntPtr lpEnvironment,
+                    String lpCurrentDirectory,
+                    ref NativeHelpers.STARTUPINFO lpStartupInfo,
+                    out NativeHelpers.PROCESS_INFORMATION lpProcessInformation);
+                [DllImport("userenv.dll", SetLastError = true)]
+                [return: MarshalAs(UnmanagedType.Bool)]
+                public static extern bool DestroyEnvironmentBlock(
+                    IntPtr lpEnvironment);
+                [DllImport("advapi32.dll", SetLastError = true)]
+                public static extern bool DuplicateTokenEx(
+                    SafeHandle ExistingTokenHandle,
+                    uint dwDesiredAccess,
+                    IntPtr lpThreadAttributes,
+                    SECURITY_IMPERSONATION_LEVEL ImpersonationLevel,
+                    TOKEN_TYPE TokenType,
+                    out SafeNativeHandle DuplicateTokenHandle);
+                [DllImport("advapi32.dll", SetLastError = true)]
+                public static extern bool GetTokenInformation(
+                    SafeHandle TokenHandle,
+                    uint TokenInformationClass,
+                    SafeMemoryBuffer TokenInformation,
+                    int TokenInformationLength,
+                    out int ReturnLength);
+                [DllImport("wtsapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+                public static extern bool WTSEnumerateSessions(
+                    IntPtr hServer,
+                    int Reserved,
+                    int Version,
+                    ref IntPtr ppSessionInfo,
+                    ref int pCount);
+                [DllImport("wtsapi32.dll")]
+                public static extern void WTSFreeMemory(
+                    IntPtr pMemory);
+                [DllImport("kernel32.dll")]
+                public static extern uint WTSGetActiveConsoleSessionId();
+                [DllImport("Wtsapi32.dll", SetLastError = true)]
+                public static extern bool WTSQueryUserToken(
+                    uint SessionId,
+                    out SafeNativeHandle phToken);
+            }
+            internal class SafeMemoryBuffer : SafeHandleZeroOrMinusOneIsInvalid
+            {
+                public SafeMemoryBuffer(int cb) : base(true)
+                {
+                    base.SetHandle(Marshal.AllocHGlobal(cb));
+                }
+                public SafeMemoryBuffer(IntPtr handle) : base(true)
+                {
+                    base.SetHandle(handle);
+                }
+                protected override bool ReleaseHandle()
+                {
+                    Marshal.FreeHGlobal(handle);
+                    return true;
+                }
+            }
+            internal class SafeNativeHandle : SafeHandleZeroOrMinusOneIsInvalid
+            {
+                public SafeNativeHandle() : base(true) { }
+                public SafeNativeHandle(IntPtr handle) : base(true) { this.handle = handle; }
+                protected override bool ReleaseHandle()
+                {
+                    return NativeMethods.CloseHandle(handle);
+                }
+            }
+            internal enum SECURITY_IMPERSONATION_LEVEL
+            {
+                SecurityAnonymous = 0,
+                SecurityIdentification = 1,
+                SecurityImpersonation = 2,
+                SecurityDelegation = 3,
+            }
+            internal enum SW
+            {
+                SW_HIDE = 0,
+                SW_SHOWNORMAL = 1,
+                SW_NORMAL = 1,
+                SW_SHOWMINIMIZED = 2,
+                SW_SHOWMAXIMIZED = 3,
+                SW_MAXIMIZE = 3,
+                SW_SHOWNOACTIVATE = 4,
+                SW_SHOW = 5,
+                SW_MINIMIZE = 6,
+                SW_SHOWMINNOACTIVE = 7,
+                SW_SHOWNA = 8,
+                SW_RESTORE = 9,
+                SW_SHOWDEFAULT = 10,
+                SW_MAX = 10
+            }
+            internal enum TokenElevationType
+            {
+                TokenElevationTypeDefault = 1,
+                TokenElevationTypeFull,
+                TokenElevationTypeLimited,
+            }
+            internal enum TOKEN_TYPE
+            {
+                TokenPrimary = 1,
+                TokenImpersonation = 2
+            }
+            internal enum WTS_CONNECTSTATE_CLASS
+            {
+                WTSActive,
+                WTSConnected,
+                WTSConnectQuery,
+                WTSShadow,
+                WTSDisconnected,
+                WTSIdle,
+                WTSListen,
+                WTSReset,
+                WTSDown,
+                WTSInit
+            }
+            public class Win32Exception : System.ComponentModel.Win32Exception
+            {
+                private string _msg;
+                public Win32Exception(string message) : this(Marshal.GetLastWin32Error(), message) { }
+                public Win32Exception(int errorCode, string message) : base(errorCode)
+                {
+                    _msg = String.Format("{0} ({1}, Win32ErrorCode {2} - 0x{2:X8})", message, base.Message, errorCode);
+                }
+                public override string Message { get { return _msg; } }
+                public static explicit operator Win32Exception(string message) { return new Win32Exception(message); }
+            }
+            public static class ProcessExtensions
+            {
+                #region Win32 Constants
+                private const int CREATE_UNICODE_ENVIRONMENT = 0x00000400;
+                private const int CREATE_NO_WINDOW = 0x08000000;
+                private const int CREATE_NEW_CONSOLE = 0x00000010;
+                private const uint INVALID_SESSION_ID = 0xFFFFFFFF;
+                private static readonly IntPtr WTS_CURRENT_SERVER_HANDLE = IntPtr.Zero;
+                #endregion
+                // Gets the user token from the currently active session
+                private static SafeNativeHandle GetSessionUserToken(bool elevated)
+                {
+                    var activeSessionId = INVALID_SESSION_ID;
+                    var pSessionInfo = IntPtr.Zero;
+                    var sessionCount = 0;
+                    // Get a handle to the user access token for the current active session.
+                    if (NativeMethods.WTSEnumerateSessions(WTS_CURRENT_SERVER_HANDLE, 0, 1, ref pSessionInfo, ref sessionCount))
+                    {
+                        try
+                        {
+                            var arrayElementSize = Marshal.SizeOf(typeof(NativeHelpers.WTS_SESSION_INFO));
+                            var current = pSessionInfo;
+                            for (var i = 0; i < sessionCount; i++)
+                            {
+                                var si = (NativeHelpers.WTS_SESSION_INFO)Marshal.PtrToStructure(
+                                    current, typeof(NativeHelpers.WTS_SESSION_INFO));
+                                current = IntPtr.Add(current, arrayElementSize);
+                                if (si.State == WTS_CONNECTSTATE_CLASS.WTSActive)
+                                {
+                                    activeSessionId = si.SessionID;
+                                    break;
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            NativeMethods.WTSFreeMemory(pSessionInfo);
+                        }
+                    }
+                    // If enumerating did not work, fall back to the old method
+                    if (activeSessionId == INVALID_SESSION_ID)
+                    {
+                        activeSessionId = NativeMethods.WTSGetActiveConsoleSessionId();
+                    }
+                    SafeNativeHandle hImpersonationToken;
+                    if (!NativeMethods.WTSQueryUserToken(activeSessionId, out hImpersonationToken))
+                    {
+                        throw new Win32Exception("WTSQueryUserToken failed to get access token.");
+                    }
+                    using (hImpersonationToken)
+                    {
+                        // First see if the token is the full token or not. If it is a limited token we need to get the
+                        // linked (full/elevated token) and use that for the CreateProcess task. If it is already the full or
+                        // default token then we already have the best token possible.
+                        TokenElevationType elevationType = GetTokenElevationType(hImpersonationToken);
+                        if (elevationType == TokenElevationType.TokenElevationTypeLimited && elevated == true)
+                        {
+                            using (var linkedToken = GetTokenLinkedToken(hImpersonationToken))
+                                return DuplicateTokenAsPrimary(linkedToken);
+                        }
+                        else
+                        {
+                            return DuplicateTokenAsPrimary(hImpersonationToken);
+                        }
+                    }
+                }
+                public static int StartProcessAsCurrentUser(string appPath, string cmdLine = null, string workDir = null, bool visible = true,int wait = -1, bool elevated = true)
+                {
+                    using (var hUserToken = GetSessionUserToken(elevated))
+                    {
+                        var startInfo = new NativeHelpers.STARTUPINFO();
+                        startInfo.cb = Marshal.SizeOf(startInfo);
+                        uint dwCreationFlags = CREATE_UNICODE_ENVIRONMENT | (uint)(visible ? CREATE_NEW_CONSOLE : CREATE_NO_WINDOW);
+                        startInfo.wShowWindow = (short)(visible ? SW.SW_SHOW : SW.SW_HIDE);
+                        //startInfo.lpDesktop = "winsta0\\default";
+                        IntPtr pEnv = IntPtr.Zero;
+                        if (!NativeMethods.CreateEnvironmentBlock(ref pEnv, hUserToken, false))
+                        {
+                            throw new Win32Exception("CreateEnvironmentBlock failed.");
+                        }
+                        try
+                        {
+                            StringBuilder commandLine = new StringBuilder(cmdLine);
+                            var procInfo = new NativeHelpers.PROCESS_INFORMATION();
+                            if (!NativeMethods.CreateProcessAsUserW(hUserToken,
+                                appPath, // Application Name
+                                commandLine, // Command Line
+                                IntPtr.Zero,
+                                IntPtr.Zero,
+                                false,
+                                dwCreationFlags,
+                                pEnv,
+                                workDir, // Working directory
+                                ref startInfo,
+                                out procInfo))
+                            {
+                                throw new Win32Exception("CreateProcessAsUser failed.");
+                            }
+                            try
+                            {
+                                NativeMethods.WaitForSingleObject( procInfo.hProcess, wait);
+                                return procInfo.dwProcessId;
+                            }
+                            finally
+                            {
+                                NativeMethods.CloseHandle(procInfo.hThread);
+                                NativeMethods.CloseHandle(procInfo.hProcess);
+                            }
+                        }
+                        finally
+                        {
+                            NativeMethods.DestroyEnvironmentBlock(pEnv);
+                        }
+                    }
+                }
+                private static SafeNativeHandle DuplicateTokenAsPrimary(SafeHandle hToken)
+                {
+                    SafeNativeHandle pDupToken;
+                    if (!NativeMethods.DuplicateTokenEx(hToken, 0, IntPtr.Zero, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation,
+                        TOKEN_TYPE.TokenPrimary, out pDupToken))
+                    {
+                        throw new Win32Exception("DuplicateTokenEx failed.");
+                    }
+                    return pDupToken;
+                }
+                private static TokenElevationType GetTokenElevationType(SafeHandle hToken)
+                {
+                    using (SafeMemoryBuffer tokenInfo = GetTokenInformation(hToken, 18))
+                    {
+                        return (TokenElevationType)Marshal.ReadInt32(tokenInfo.DangerousGetHandle());
+                    }
+                }
+                private static SafeNativeHandle GetTokenLinkedToken(SafeHandle hToken)
+                {
+                    using (SafeMemoryBuffer tokenInfo = GetTokenInformation(hToken, 19))
+                    {
+                        return new SafeNativeHandle(Marshal.ReadIntPtr(tokenInfo.DangerousGetHandle()));
+                    }
+                }
+                private static SafeMemoryBuffer GetTokenInformation(SafeHandle hToken, uint infoClass)
+                {
+                    int returnLength;
+                    bool res = NativeMethods.GetTokenInformation(hToken, infoClass, new SafeMemoryBuffer(IntPtr.Zero), 0,
+                        out returnLength);
+                    int errCode = Marshal.GetLastWin32Error();
+                    if (!res && errCode != 24 && errCode != 122)  // ERROR_INSUFFICIENT_BUFFER, ERROR_BAD_LENGTH
+                    {
+                        throw new Win32Exception(errCode, String.Format("GetTokenInformation({0}) failed to get buffer length", infoClass));
+                    }
+                    SafeMemoryBuffer tokenInfo = new SafeMemoryBuffer(returnLength);
+                    if (!NativeMethods.GetTokenInformation(hToken, infoClass, tokenInfo, returnLength, out returnLength))
+                        throw new Win32Exception(String.Format("GetTokenInformation({0}) failed", infoClass));
+                    return tokenInfo;
+                }
+            }
+        }
+"@
+
+        # Load the custom type
+        if (!("RunAsUser.ProcessExtensions" -as [type])) {Add-Type -TypeDefinition $source -Language CSharp}
+
+       
+		# Create Log Folder path if not present        
+        $oFolderPath = Split-Path $ScriptBlockLog
+		If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
+            
+
+        # Enhance Scriptblock
+        $Script_LogPath = "`$Script:LogPath = ""$ScriptBlockLog"" `n"
+
+        $Script_Init = {
+
+            function Write-log 
+                {
+                    Param(
+                          [parameter()]
+                          [String]$Path=$Script:LogPath,
+
+                          [parameter(Position=0)]
+                          [String]$Message,
+
+                          [parameter()]
+                          [String]$Component="Invoke-AsCurrentUser",
+
+		                  #Severity  Type(1 - Information, 2- Warning, 3 - Error)
+		                  [parameter(Mandatory=$False)]
+		                  [ValidateRange(1,3)]
+		                  [Single]$Type = 1
+                    )
+
+
+                    # Create a log entry
+                    $Content = "<![LOG[$Message]LOG]!>" +`
+                        "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
+                        "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
+                        "component=`"$Component`" " +`
+                        "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
+                        "type=`"$Type`" " +`
+                        "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
+                        "file=`"`">"
+
+                    # Write the line to the log file
+                    Add-Content -Path $Path -Value $Content -Encoding UTF8 -ErrorAction SilentlyContinue
+                }
+
+
+            function Write-Errorlog 
+                {
+                    Param([parameter(Position=0)][String]$Message)
+                    Write-log -Message $Message -type 3
+                }
+
+
+            function Write-Warninglog 
+                {
+                    Param([parameter(Position=0)][String]$Message)
+                    Write-log -Message $Message -type 2
+                }
+
+        }
+
+        $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Init.ToString() + $ScriptBlock.ToString().replace("Write-Host", "Write-log").replace("Write-Warning", "Write-Warninglog").replace("Write-Error", "Write-Errorlog"))
+        $encodedcommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($ScriptBlock))
+
+        $OSLevel = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentVersion
+        if ($OSLevel -lt 6.2) { $MaxLength = 8190 } else { $MaxLength = 32767 }
+        if ($encodedcommand.length -gt $MaxLength -and $CacheToDisk -eq $false) 
+            {
+                Write-Log "The encoded script is longer than the command line parameter limit. The script will be cached to disk"
+                $CacheToDisk = $true
+            }
+
+        if ($CacheToDisk) 
+            {
+                $ScriptGuid = new-guid
+                $ScriptBlock|Out-File -FilePath "$($ENV:TEMP)\$($ScriptGuid).ps1" -Encoding default
+                Write-log "Script Block converted to file $($ENV:TEMP)\$($ScriptGuid).ps1"
+                $pwshcommand = "-ExecutionPolicy Bypass -Window Normal -file `"$($ENV:TEMP)\$($ScriptGuid).ps1`""
+            }
+        else 
+            {$pwshcommand = "-ExecutionPolicy Bypass -Window Normal -EncodedCommand $($encodedcommand)"}
+
+        $privs = whoami /priv /fo csv | ConvertFrom-Csv | Where-Object { $_.'Privilege Name' -eq 'SeDelegateSessionUserImpersonatePrivilege' }
+        if ($privs.State -eq "Disabled") 
+            {
+                Write-log -Message "Not running with correct privilege. You must run this script as system or have the SeDelegateSessionUserImpersonatePrivilege token." -Type 3
+                return
+            }
+        else 
+            {
+                try 
+                    {
+                        # Use the same PowerShell executable as the one that invoked the function, Unless -UseWindowsPowerShell is defined
+           
+                        if (!$UseWindowsPowerShell) 
+                            { $pwshPath = (Get-Process -Id $pid).Path } 
+                        else 
+                            { 
+                                If ($Architecture.ToUpper() = "X64")
+                                    {$pwshPath = "$($ENV:windir)\system32\WindowsPowerShell\v1.0\powershell.exe"}
+                                Else
+                                    {$pwshPath = "$($ENV:windir)\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"}     
+                            }
+                        
+                        if ($NoWait) { $ProcWaitTime = 1 } else { $ProcWaitTime = -1 }
+                        if ($NonElevatedSession) { $RunAsAdmin = $false } else { $RunAsAdmin = $true }
+                        
+                        [RunAsUser.ProcessExtensions]::StartProcessAsCurrentUser($pwshPath, "`"$pwshPath`" $pwshcommand",(Split-Path $pwshPath -Parent), $Visible, $ProcWaitTime, $RunAsAdmin)|Out-Null
+                        
+                        if ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force }
+                    }
+                catch 
+                    {
+                        Write-Log "Could not execute as currently logged on user: $($_.Exception.Message)" -Exception $_.Exception -Type 3
+                        return
+                    }
+            }
+    }
+
+ 
 #endregion 
 
 ##== Initializing Environement
@@ -498,7 +998,8 @@ Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
 Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
 Write-Log "User Name: $($Script:TsEnv.CurrentUser)"
 Write-Log "User is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
-Write-Log "User is System: $($Script:TsEnv.CurrentUserIsSystem)" 
+Write-Log "User is System: $($Script:TsEnv.CurrentUserIsSystem)"
+Write-Log "User is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
 
 
 
