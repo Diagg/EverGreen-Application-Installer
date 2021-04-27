@@ -14,6 +14,7 @@ Function Get-AppInfo
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010)
             AppUninstallSuccessReturnCodes = @(0,3010)
+            AppMustUninstallBeforeUpdate = $false
         }
     }
 
@@ -58,6 +59,8 @@ Function Get-AppUpdateStatus
     {    
         # Return $True if the application need to updated
         If ([version]($Script:AppEverGreenInfo.Version) -gt [version]$Script:AppInfo.AppInstalledVersion)
+            {Return $True}
+        ElseIf ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture)
             {Return $True}
         Else        
             {Return $False}

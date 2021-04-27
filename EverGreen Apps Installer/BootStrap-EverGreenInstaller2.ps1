@@ -1056,8 +1056,8 @@ $Script:AppInfo = Get-AppInfo
 $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
 Get-AppInstallStatus
 
-If ($AppInfo.AppIsInstalled)
-    {Write-log "Version $($AppInfo.AppInstalledVersion) of $Application detected!"}
+If ($Script:AppInfo.AppIsInstalled)
+    {Write-log "Version $($Script:AppInfo.AppInstalledVersion) of $Application detected!"}
 Else
     {
         $AppInstallNow = $true
@@ -1073,7 +1073,7 @@ If ($Uninstall -ne $true)
         $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
 
         ##==Check if we need to update
-        $AppUpdateStatus = Get-AppUpdateStatus -ObjAppInfo $AppInfo -GreenAppInfo $Script:AppEverGreenInfo
+        $AppUpdateStatus = Get-AppUpdateStatus
         If ($AppUpdateStatus)
             {
                 $AppInstallNow = $true
@@ -1104,6 +1104,23 @@ If ($Uninstall -ne $true)
                 $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
             }
         
+         ##== Uninstall before Update if requiered
+        If ($Script:AppInfo.AppIsInstalled -eq $True -and $Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true)
+            {
+                ##== Uninstall
+                $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
+                If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
+                    {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully before reinstall/Update!!!"}
+                Else
+                    {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall before new update !!!" -Type 2}
+
+                ##== Additionnal removal action
+                Write-log "Uninstalling addintionnal items before reinstall/Update !"
+                Invoke-AdditionalUninstall
+            }
+
+
+
         ##==Install
         if ($AppInstallNow -eq $True)
             {
@@ -1111,18 +1128,18 @@ If ($Uninstall -ne $true)
                 If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
                     {
                         Write-log "Download directory: $InstallSourcePath" 
-                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $AppInfo.AppExtension.ToUpper()))
-                            {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
+                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
+                            {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
                         Else
                             {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
                     }
                 Else
-                    {$AppInfo.AppInstallParameters = $AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
+                    {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
                 
                 ## Execute Intall Program
-                write-log "Installing $Application with command $($AppInfo.AppInstallCMD) and parameters $($AppInfo.AppInstallParameters)"
-                $Iret = (Start-Process $AppInfo.AppInstallCMD -ArgumentList $AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
-                If ($AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
+                write-log "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
+                $Iret = (Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
+                If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
                     {Write-log "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"}
                 Else
                     {Write-log "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
@@ -1140,23 +1157,26 @@ If ($Uninstall -ne $true)
         If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
             {
                 Write-log "Disabling $Application update feature !"
-                Invoke-DisableUpdateCapability $AppInfo
+                Invoke-DisableUpdateCapability
             }
     }
 Else
     {
-        If ($AppInfo.AppIsInstalled -eq $False){Write-log "Application $Application is not installed, nothing to uninstall ! All operation finished!!" ; Exit}
-        
-        ##== Uninstall
-        $Iret = (Start-Process $AppInfo.AppUninstallCMD -ArgumentList $AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
-        If ($AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
-            {Write-log "Application $Application - version $($AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
+        If ($Script:AppInfo.AppIsInstalled -eq $False)
+            {Write-log "Application $Application is not installed, nothing to uninstall ! All operation finished!!"}
         Else
-            {Write-log "[Warning] Application $Application - version $($AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
+            {
+                ##== Uninstall
+                $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
+                If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
+                    {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
+                Else
+                    {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
 
-        ##== Additionnal removal action
-        Write-log "Uninstalling addintionnal items !"
-        Invoke-AdditionalUninstall $AppInfo
+                ##== Additionnal removal action
+                Write-log "Uninstalling addintionnal items !"
+                Invoke-AdditionalUninstall
+            }
     }
 
 
