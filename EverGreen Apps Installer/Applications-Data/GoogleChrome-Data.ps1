@@ -118,9 +118,9 @@ Function Invoke-AdditionalUninstall
 Function Invoke-DisableUpdateCapability
     {
         $DisableUpdate_ScriptBlock = { 
-                set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped
-                set-Service Gupdate -StartupType Disabled -Status Stopped
-                set-Service Gupdatem -StartupType Disabled -Status Stopped
+                set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
+                set-Service Gupdate -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
+                set-Service Gupdatem -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false
                 sc.exe delete "GUpdate"
