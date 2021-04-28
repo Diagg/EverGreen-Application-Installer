@@ -167,6 +167,7 @@ Function Invoke-DisableUpdateCapability
                     }
             }
 
+
         $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $ScriptBlog_Line1.ToString() + $ScriptBlog_Line1.ToString() + $AdditionalScriptBlock.ToString())
         
         If ($Script:TsEnv.CurrentUserIsSystem)
