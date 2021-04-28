@@ -998,9 +998,9 @@ Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
 Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
 Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
 Write-Log "Logged on user: $($Script:TsEnv.CurrentLoggedOnUser)"
-Write-Log "Exec. Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
-Write-Log "Exec. Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
-Write-Log "Exec. Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
+Write-Log "Execution Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
+Write-Log "Execution Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
+Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
 
 
 
@@ -1107,18 +1107,21 @@ If ($Uninstall -ne $true)
 
         
         ##== Uninstall before Update if requiered
-        If (($Script:AppInfo.AppIsInstalled -eq $True -and $Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
+        If ($Script:AppInfo.AppIsInstalled -eq $True)
             {
-                ##== Uninstall
-                $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
-                If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
-                    {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully before reinstall/Update!!!"}
-                Else
-                    {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall before new update !!!" -Type 2}
+                If (($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
+                    {
+                        ##== Uninstall
+                        $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
+                        If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
+                            {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully before reinstall/Update!!!"}
+                        Else
+                            {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall before new update !!!" -Type 2}
 
-                ##== Additionnal removal action
-                Write-log "Uninstalling addintionnal items before reinstall/Update !"
-                Invoke-AdditionalUninstall
+                        ##== Additionnal removal action
+                        Write-log "Uninstalling addintionnal items before reinstall/Update !"
+                        Invoke-AdditionalUninstall
+                    }
             }
 
 
@@ -1145,6 +1148,7 @@ If ($Uninstall -ne $true)
                 Else
                     {Write-log "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
 
+
                 ## Clean Download Folder
                 if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
                     {
@@ -1154,7 +1158,7 @@ If ($Uninstall -ne $true)
             }
 
  
-         ##== Remove Update capabilities
+        ##== Remove Update capabilities
         If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
             {
                 Write-log "Disabling $Application update feature !"

@@ -129,34 +129,45 @@ Function Invoke-DisableUpdateCapability
 
         If ($Script:AppInfo.AppInstallArchitecture -eq 'X86')
             {
-                $Path1 = "C:\Program Files\Google\Update"
-                $Path2 = "C:\Program Files\Google\NOUpdate"
-                $AdditionalScriptBlock = {
-                        $attempts = 1
-                        While (-not(Test-path "C:\Program Files\Google\NOUpdate") -and $attempts -le 15)
-                            {
-                                Rename-Item "C:\Program Files\Google\Update" -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
-                                Start-Sleep 1
-                                $attempts += 1                               
-                            }
+                If($Script:TsEnv.SystemOSArchitectureIsX64)
+                    {
+                        $Path1 = "C:\Program Files (x86)\Google\Update"
+                        $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
+                    }
+                Else
+                    {
+                        $Path1 = "C:\Program Files\Google\Update"
+                        $Path2 = "C:\Program Files\Google\NOUpdate"
                     }
             }
         Else
             {
-                $Path1 = "C:\Program Files (x86)\Google\Update"
-                $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
-                $AdditionalScriptBlock = {
-                        $attempts = 1
-                        While (-not(Test-path "C:\Program Files (x86)\Google\NOUpdate") -and $attempts -le 15)
-                            {
-                                Rename-Item "C:\Program Files (x86)\Google\Update" -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
-                                Start-Sleep 1
-                                $attempts += 1                               
-                            }
+                If($Script:TsEnv.SystemOSArchitectureIsX64)
+                    {
+                        $Path1 = "C:\Program Files\Google\Update"
+                        $Path2 = "C:\Program Files\Google\NOUpdate"
+                    }
+                Else
+                    {
+                        $Path1 = "C:\Program Files (x86)\Google\Update"
+                        $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
                     }
             }
 
-        $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $AdditionalScriptBlock.ToString())
+        $ScriptBlog_Line1 = "`$Path1 = ""$Path1"" `n"
+        $ScriptBlog_Line2 = "`$Path2 = ""$Path2"" `n"
+
+        $AdditionalScriptBlock = {
+                $attempts = 1
+                While (-not(Test-path $Path2) -and $attempts -le 15)
+                    {
+                        Rename-Item $Path1 -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
+                        Start-Sleep 1
+                        $attempts += 1                               
+                    }
+            }
+
+        $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $ScriptBlog_Line1.ToString() + $ScriptBlog_Line1.ToString() + $AdditionalScriptBlock.ToString())
         
         If ($Script:TsEnv.CurrentUserIsSystem)
             {Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
