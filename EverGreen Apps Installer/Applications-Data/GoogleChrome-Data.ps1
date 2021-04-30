@@ -77,7 +77,7 @@ Function Invoke-AdditionalUninstall
                         If (Test-Path $Folder){Get-childitem $folder|Remove-Item -Force -Confirm:$false -Recurse -ErrorAction SilentlyContinue}
                     }
 
-                $CurrentUser = $(Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
+                $CurrentUser = $(Get-CimInstance -classname Win32_ComputerSystem | Select-Object -expand UserName)
                 $CurrentUserSID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
                 $CurrentUserProfilePath = (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
                 
@@ -168,7 +168,7 @@ Function Invoke-DisableUpdateCapability
             }
 
 
-        $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $ScriptBlog_Line1.ToString() + $ScriptBlog_Line1.ToString() + $AdditionalScriptBlock.ToString())
+        $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $ScriptBlog_Line1.ToString() + $ScriptBlog_Line2.ToString() + $AdditionalScriptBlock.ToString())
         
         If ($Script:TsEnv.CurrentUserIsSystem)
             {Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
