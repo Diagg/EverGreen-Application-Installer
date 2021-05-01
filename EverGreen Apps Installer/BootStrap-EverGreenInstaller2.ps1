@@ -1014,9 +1014,26 @@ Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsT
 
 
 If ($Uninstall -eq $true){Write-log "Selected Action: Uninstallation"}
-else{Write-log "Selected Action: Installation"}
+else
+    {
+        if (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+            {
+                Write-log "Selected Action: Installation from offline source"
+                Write-log "Install Option: Offline location $InstallSourcePath"
+                $OfflineInstall = $true
+            }    
+        Else
+            {Write-log "Selected Action: Installation"}
+    }
 
 If ($DisableUpdate -eq $true){Write-log "Install Option: Disabling update feature"}
+
+if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
+    {
+        Write-log "Selected Action: Predownloading without installation"
+        Write-log "Install Option: Download location $PreDownloadPath"
+    }
+
 
 ##== Init        
 If ($Uninstall -eq $true){Initialize-Prereq -NoModuleUpdate}
@@ -1098,13 +1115,17 @@ If ($Uninstall -ne $true)
         ##==Download
         if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
             {
-                If (-not(Test-path $PreDownloadPath)){$Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue}
-                If ([string]::IsNullOrWhiteSpace($Iret)){Write-log "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
+                If (-not(Test-path $PreDownloadPath))
+                    {
+                        $Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue
+                        If ([string]::IsNullOrWhiteSpace($Iret)){Write-log "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
+                    }
+                
                 $AppDownloadDir = $PreDownloadPath
                 $AppInstallNow = $False
             }
 
-        If ([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True)
+        If (([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True) -or (-not([String]::IsNullOrWhiteSpace($PreDownloadPath))))
             {
                 Write-log "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
                 Write-log "Download Url: $($Script:AppEverGreenInfo.uri)"
@@ -1112,11 +1133,13 @@ If ($Uninstall -ne $true)
 
                 $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
                 $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
+
+                Write-log "Successfully downloaded $Application to folder $InstallSourcePath"
             }
 
         
         ##== Uninstall before Update if requiered
-        If ($Script:AppInfo.AppIsInstalled -eq $True)
+        If ($Script:AppInfo.AppIsInstalled -eq $True -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
             {
                 If (($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
                     {
@@ -1160,7 +1183,7 @@ If ($Uninstall -ne $true)
 
 
                 ## Clean Download Folder
-                if ([String]::IsNullOrWhiteSpace($PreDownloadPath))
+                if ([String]::IsNullOrWhiteSpace($PreDownloadPath) -and $OfflineInstall -ne $true )
                     {
                         Write-log "cleaning Download folder"
                         Remove-Item $InstallSourcePath -Force -ErrorAction SilentlyContinue
