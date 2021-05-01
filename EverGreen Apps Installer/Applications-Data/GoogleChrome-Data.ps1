@@ -12,8 +12,8 @@ Function Get-AppInfo
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallCMD = "MsiExec"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
-            AppInstallSuccessReturnCodes = @(0,3010)
-            AppUninstallSuccessReturnCodes = @(0,3010)
+            AppInstallSuccessReturnCodes = @(0,3010,1641)
+            AppUninstallSuccessReturnCodes = @(0,3010,1641)
             AppMustUninstallBeforeUpdate = $false
             AppMustUninstallOnArchChange = $true
         }
@@ -84,6 +84,11 @@ Function Invoke-AdditionalUninstall
                 If (Test-Path ("$CurrentUserProfilePath\Desktop\Google Chrome.lnk")){Remove-Item "$CurrentUserProfilePath\Desktop\Google Chrome.lnk" -Force|Out-Null}
                 If (Test-Path ("$CurrentUserProfilePath\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk")){Remove-Item "$CurrentUserProfilePath\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" -Force|Out-Null}
                 If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
+
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
+                sc.exe delete "GUpdate"
+                sc.exe delete "GUpdatem"
 
             }
 
