@@ -173,7 +173,7 @@ Function Invoke-DisableUpdateCapability
 
         $AdditionalScriptBlock = {
                 $attempts = 1
-                While (-not(Test-path $Path2) -and $attempts -le 15)
+                While (-not(Test-path $Path2) -and $attempts -le 5)
                     {
                         Rename-Item $Path1 -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
                         Start-Sleep 1
@@ -188,7 +188,8 @@ Function Invoke-DisableUpdateCapability
             {Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
         Else
             {Invoke-AsSystemNow -ScriptBlock $DisableUpdate_ScriptBlock}
-
+        
+        Rename-Item $Path1 -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
 
         If (-Not (Test-path $Path1) -and (Test-path $Path2))
             {Write-log "Update feature disabled successfully for $($Script:AppInfo.AppInstallName) !"}
