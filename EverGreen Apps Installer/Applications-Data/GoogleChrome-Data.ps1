@@ -141,7 +141,7 @@ Function Invoke-DisableUpdateCapability
                 sc.exe delete "GUpdatem"
             }
 
-        If ($Script:AppInfo.AppInstallArchitecture -eq 'X86')
+        If ($($Script:AppInfo.AppInstallArchitecture) -eq 'X86')
             {
                 If($Script:TsEnv.SystemOSArchitectureIsX64)
                     {
