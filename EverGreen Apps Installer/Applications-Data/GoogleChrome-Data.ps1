@@ -173,7 +173,7 @@ Function Invoke-DisableUpdateCapability
 
         $AdditionalScriptBlock = {
                 $attempts = 1
-                While (-not(Test-path $Path2) -and $attempts -le 5)
+                While (-not(Test-path $Path2) -and $attempts -le 10)
                     {
                         Rename-Item $Path1 -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
                         Start-Sleep 1
