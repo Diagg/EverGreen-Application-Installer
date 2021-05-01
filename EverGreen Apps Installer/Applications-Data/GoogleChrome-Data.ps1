@@ -78,6 +78,15 @@ Function Invoke-AdditionalUninstall
                     }
 
                 $CurrentUser = $(Get-CimInstance -classname Win32_ComputerSystem | Select-Object -expand UserName)
+                If ([String]::IsNullOrWhiteSpace($CurrentUser))
+                    {
+                        # Get user when in Windows Sandbox
+                        If ((Get-LocalUser WDAGUtilityAccount).Enabled)
+                            {$CurrentUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
+                        Else
+                            {Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
+                    }
+
                 $CurrentUserSID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
                 $CurrentUserProfilePath = (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
                 
