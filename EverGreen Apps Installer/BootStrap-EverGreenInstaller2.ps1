@@ -975,8 +975,6 @@ If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
     }
 
 
-
-
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value ([System.Environment]::MachineName)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value ([System.Environment]::OSVersion.VersionString)
@@ -994,10 +992,6 @@ $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath
 
 ##== Local Constantes
 $AppDownloadDir = "$env:Public\Downloads" 
-
-
-
-
 
 $StartupTime = [DateTime]::Now
 Write-log 
@@ -1017,7 +1011,6 @@ Write-Log "Logged on user: $($Script:TsEnv.CurrentLoggedOnUser)"
 Write-Log "Execution Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
 Write-Log "Execution Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
 Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
-
 
 
 If ($Uninstall -eq $true){Write-log "Selected Action: Uninstallation"}

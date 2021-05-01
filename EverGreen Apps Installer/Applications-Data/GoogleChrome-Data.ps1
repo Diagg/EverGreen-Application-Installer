@@ -132,68 +132,34 @@ Function Invoke-AdditionalUninstall
 Function Invoke-DisableUpdateCapability
     {
         $DisableUpdate_ScriptBlock = { 
-                set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
-                set-Service Gupdate -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
-                set-Service Gupdatem -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
+                Set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
+                Set-Service Gupdate -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
+                Set-Service Gupdatem -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false -ErrorAction SilentlyContinue
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
-                sc.exe delete "GUpdate"
-                sc.exe delete "GUpdatem"
+                Sc.exe delete "GUpdate"
+                Sc.exe delete "GUpdatem"
+
+                $FolderList = @("C:\Program Files\google\Update","C:\Program Files (x86)\google\Update")
+                Foreach ($Folder in $FolderList){If (Test-Path $Folder){Rename-Item $Folder -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue}}
             }
 
-        If ($($Script:AppInfo.AppInstallArchitecture) -eq 'X86')
-            {
-                If($Script:TsEnv.SystemOSArchitectureIsX64)
-                    {
-                        $Path1 = "C:\Program Files (x86)\Google\Update"
-                        $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
-                    }
-                Else
-                    {
-                        $Path1 = "C:\Program Files\Google\Update"
-                        $Path2 = "C:\Program Files\Google\NOUpdate"
-                    }
-            }
-        Else
-            {
-                If($Script:TsEnv.SystemOSArchitectureIsX64)
-                    {
-                        $Path1 = "C:\Program Files\Google\Update"
-                        $Path2 = "C:\Program Files\Google\NOUpdate"
-                    }
-                Else
-                    {
-                        $Path1 = "C:\Program Files (x86)\Google\Update"
-                        $Path2 = "C:\Program Files (x86)\Google\NOUpdate"
-                    }
-            }
-
-        $ScriptBlog_Line1 = "`$Path1 = ""$Path1"" `n"
-        $ScriptBlog_Line2 = "`$Path2 = ""$Path2"" `n"
-
-        $AdditionalScriptBlock = {
-                $attempts = 1
-                While (-not(Test-path $Path2) -and $attempts -le 10)
-                    {
-                        Rename-Item $Path1 -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
-                        Start-Sleep 1
-                        $attempts += 1                               
-                    }
-            }
-
-
-        $DisableUpdate_ScriptBlock = [ScriptBlock]::Create($DisableUpdate_ScriptBlock.ToString() + $ScriptBlog_Line1.ToString() + $ScriptBlog_Line2.ToString() + $AdditionalScriptBlock.ToString())
-        
+       
         If ($Script:TsEnv.CurrentUserIsSystem)
             {Invoke-Command -ScriptBlock $DisableUpdate_ScriptBlock}
         Else
             {Invoke-AsSystemNow -ScriptBlock $DisableUpdate_ScriptBlock}
         
-        Rename-Item $Path1 -NewName "NOUpdate" -Force -ErrorAction SilentlyContinue
+        $FolderList = @("C:\Program Files\google\NOUpdate","C:\Program Files (x86)\google\NOUpdate")
+        Foreach ($Folder in $FolderList)
+            {
+                If (Test-Path $Folder)
+                    {
+                        Write-log "Update feature disabled successfully for $($Script:AppInfo.AppInstallName) !"
+                        $Success = $True
+                        Break
+                    }
+            }
 
-        If (-Not (Test-path $Path1) -and (Test-path $Path2))
-            {Write-log "Update feature disabled successfully for $($Script:AppInfo.AppInstallName) !"}
-        Else
-            {Write-log "[Error] Unable to remove Update feature for $($Script:AppInfo.AppInstallName) !" -Type 3} 
-
+        If ($Success -ne $True){Write-log "[Error] Unable to remove Update feature for $($Script:AppInfo.AppInstallName) !" -Type 3} 
     }
