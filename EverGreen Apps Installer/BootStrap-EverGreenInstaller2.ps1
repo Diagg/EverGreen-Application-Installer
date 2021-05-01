@@ -1112,6 +1112,7 @@ If ($Uninstall -ne $true)
                 If (($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
                     {
                         ##== Uninstall
+                        Write-log "Uninstalling $Application before reinstall/Update !"
                         $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
                         If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
                             {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully before reinstall/Update!!!"}

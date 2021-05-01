@@ -121,8 +121,8 @@ Function Invoke-DisableUpdateCapability
                 set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 set-Service Gupdate -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 set-Service Gupdatem -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
-                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false
-                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
                 sc.exe delete "GUpdate"
                 sc.exe delete "GUpdatem"
             }
