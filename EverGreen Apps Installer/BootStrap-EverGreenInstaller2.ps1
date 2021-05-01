@@ -1197,6 +1197,17 @@ If ($Uninstall -ne $true)
                 Write-log "Disabling $Application update feature !"
                 Invoke-DisableUpdateCapability
             }
+
+
+        ##== Tag in registry
+        $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
+        If (-not(Test-path $RegTag)){New-item -Path $RegTag -Force|Out-Null}
+        If (-not(Test-path "$RegTag\$Application")){New-item -Path "$RegTag\$Application" -Force|Out-Null}
+        New-ItemProperty -Path "$RegTag\$Application" -Name "Install Date" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
+        New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
+        New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
+        New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
+        
     }
 Else
     {
@@ -1214,6 +1225,7 @@ Else
                 ##== Additionnal removal action
                 Write-log "Uninstalling addintionnal items !"
                 Invoke-AdditionalUninstall
+                Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
             }
     }
 
