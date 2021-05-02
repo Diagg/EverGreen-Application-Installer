@@ -1209,6 +1209,102 @@ If ($Uninstall -ne $true)
         New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
         New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
         New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
+
+
+        ##== Create Scheduled task
+        $ScriptBlock_UpdateEval = {
+            ##== Functions
+            function Write-log 
+                {
+                     Param(
+                          [parameter()]
+                          [String]$Path="C:\Windows\Logs\EvergreenApplication\ApplicationUpdateEvaluation.log",
+
+                          [parameter(Position=0)]
+                          [String]$Message,
+
+                          [parameter()]
+                          [String]$Component="ApplicationUpdateEvaluation",
+
+		                  #Severity  Type(1 - Information, 2- Warning, 3 - Error)
+		                  [parameter(Mandatory=$False)]
+		                  [ValidateRange(1,3)]
+		                  [Single]$Type = 1
+                    )
+
+		            # Create Folder path if not present
+                    $oFolderPath = Split-Path $Path
+		            If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
+
+                    # Create a log entry
+                    $Content = "<![LOG[$Message]LOG]!>" +`
+                        "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
+                        "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
+                        "component=`"$Component`" " +`
+                        "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
+                        "type=`"$Type`" " +`
+                        "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
+                        "file=`"`">"
+
+                    # Write the line to the log file
+                    Add-Content -Path $Path -Value $Content -Encoding UTF8 -ErrorAction SilentlyContinue
+                }
+
+
+            ##== Main
+            $StartupTime = [DateTime]::Now
+            Write-log 
+            Write-log "***************************************************************************************************"
+            Write-log "***************************************************************************************************"
+            Write-log "Started processing time: [$StartupTime]"
+            Write-log "Script Name: ApplicationUpdateEvaluation"
+            Write-log "***************************************************************************************************"
+
+            $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
+            $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
+
+            ForEach ($Regitem in $EverGreenApps)
+                {
+                    $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
+                    If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
+                        {
+                            Write-log "Application : $Regitem"
+                            $AppInstalledVersion = $AppInfo.DisplayVersion
+                            $AppInstalledArchitecture = $AppInfo.Architecture
+                            Write-log "Installed version : $AppInstalledVersion"
+
+                            Write-log "Checking for Newer version online..."
+                            $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
+                            Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
+
+                            If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                {
+                                    Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
+                                    Write-log "$Regitem application status changed to Obsolete !"
+                                }
+                        }
+                }
+
+            $FinishTime = [DateTime]::Now
+            Write-log "***************************************************************************************************"
+            Write-log "Finished processing time: [$FinishTime]"
+            Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
+            Write-log "All Operations Finished!! Exit !"
+            Write-log "***************************************************************************************************"  
+        }
+
+        $TaskName = "EverGreen Update Evaluation"
+        $SchedulerPath = "\Microsoft\Windows\PowerShell\ScheduledJobs"
+        $trigger = New-JobTrigger -Daily -At 12:00
+        $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
+
+        $task = Get-ScheduledJob -Name $taskName  -ErrorAction SilentlyContinue
+        if ($null -ne $task){Unregister-ScheduledJob $task -Confirm:$false}
+
+        Register-ScheduledJob -Name $taskName  -Trigger $trigger  -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval|Out-Null
+        $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount  -RunLevel Highest
+        Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
+        write-log "Update Evaluation Scheduled task installed successfully under name $Taskname!"
         
     }
 Else
