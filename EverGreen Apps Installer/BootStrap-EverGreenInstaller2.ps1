@@ -66,9 +66,11 @@ By Diagg/OSD-Couture.com -
 Twitter: @Diagg
 
 Additional Credits
-Get-GistContent by Darren J. Robinson 
+Get-GithubContent based on work by Darren J. Robinson 
 https://blog.darrenjrobinson.com/searching-and-retrieving-your-github-gists-using-powershell/
 
+Invoke-AsCurrentUser based on work by Kelvin Tegelaar
+https://www.cyberdrain.com/automating-with-powershell-impersonating-users-while-running-as-system/
 
 
 Release date: 09/03/2021
