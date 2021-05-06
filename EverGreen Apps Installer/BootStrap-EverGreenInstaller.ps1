@@ -970,7 +970,7 @@ $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -V
 If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
     {
         # Get user when in Windows Sandbox
-        If ((Get-LocalUser WDAGUtilityAccount).Enabled)
+        If ((Get-CimInstance -Class Win32_UserAccount -Filter "LocalAccount=True AND Disabled=False AND Status='OK'").Name -eq 'WDAGUtilityAccount')
             {$Script:TsEnv.CurrentLoggedOnUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
         # Get Azure AD User
         Else
