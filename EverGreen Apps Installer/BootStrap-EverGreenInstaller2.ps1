@@ -73,8 +73,8 @@ Invoke-AsCurrentUser based on work by Kelvin Tegelaar
 https://www.cyberdrain.com/automating-with-powershell-impersonating-users-while-running-as-system/
 
 
-Release date: 09/03/2021
-Version: 0.17
+Release date: 06/05/2021
+Version: 0.18
 #>
 
 #Requires -Version 5
@@ -972,9 +972,23 @@ If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
         # Get user when in Windows Sandbox
         If ((Get-LocalUser WDAGUtilityAccount).Enabled)
             {$Script:TsEnv.CurrentLoggedOnUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
+        # Get Azure AD User
         Else
-            {Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
+            {
+                If([string]::IsNullOrWhiteSpace($(Get-PSDrive -Name HKU -ErrorAction SilentlyContinue))){New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | out-null}
+                $UserReg = Get-Itemproperty "HKU:\*\Volatile Environment"
+                $CurrentLoggedOnUser = "$($UserReg.USERDOMAIN)\$($UserReg.USERNAME)"
+                $CurrentLoggedOnUserSID = split-path $UserReg.PSParentPath -leaf
+                If(Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $CurrentLoggedOnUserSID})
+                    {
+                        $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
+                        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value $CurrentLoggedOnUserSID
+                        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUserUPN' -Value $(Get-ItemProperty -Path $((Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 | Where-Object { $_.Name -match $CurrentLoggedOnUserSID}).pspath) | Select-Object -ExpandProperty IdentityName)
+                    }
+            }
     }
+
+If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser)){Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
 
 
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value ([System.Environment]::MachineName)
@@ -987,7 +1001,7 @@ $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -V
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsTrustedInstaller' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464")
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[1]
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[0]
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentLoggedOnUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
+If(-not ($Script:TsEnv.CurrentUserSID)){$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentLoggedOnUser)).Translate([System.Security.Principal.SecurityIdentifier]).value}
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $Script:TsEnv.CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
 $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath' -Value "HKU:\$($Script:TsEnv.CurrentUserSID)" 
 
@@ -1010,6 +1024,7 @@ Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
 Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
 Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
 Write-Log "Logged on user: $($Script:TsEnv.CurrentLoggedOnUser)"
+If($Script:TsEnv.CurrentLoggedOnUserUPN) {Write-Log "Logged on user UPN: $($Script:TsEnv.CurrentLoggedOnUserUPN)"}
 Write-Log "Execution Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
 Write-Log "Execution Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
 Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
