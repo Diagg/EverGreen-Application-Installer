@@ -98,7 +98,6 @@ Function Invoke-AdditionalUninstall
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
                 sc.exe delete "GUpdate"
                 sc.exe delete "GUpdatem"
-
             }
 
         If ($Script:TsEnv.CurrentUserIsSystem)
@@ -132,6 +131,7 @@ Function Invoke-AdditionalUninstall
 Function Invoke-DisableUpdateCapability
     {
         $DisableUpdate_ScriptBlock = { 
+                Start-Sleep 5
                 Set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 Set-Service Gupdate -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 Set-Service Gupdatem -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue

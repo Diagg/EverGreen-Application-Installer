@@ -57,6 +57,10 @@ C:\PS> .\BootStrap-EverGreenInstallation -Application GoogleChrome -PostScriptUR
 Download and silently Install the lastest x64 version of Google Chrome,
 Then download and execute the script from gist repo.
 
+.EXAMPLE
+Powershell.Exe -executionpolicy bypass -file BootStrap-EverGreenInstaller.ps1 -Application GoogleChrome -Architecture x64
+
+Syntaxe for Intune Integration
 
 .LINK
 http://www.OSD-Couture.com
@@ -72,9 +76,13 @@ https://blog.darrenjrobinson.com/searching-and-retrieving-your-github-gists-usin
 Invoke-AsCurrentUser based on work by Kelvin Tegelaar
 https://www.cyberdrain.com/automating-with-powershell-impersonating-users-while-running-as-system/
 
+X64 Relaunch based on work by Nathan ZIEHNERT
+https://z-nerd.com/blog/2020/03/31-intune-win32-apps-powershell-script-installer/
 
-Release date: 06/05/2021
-Version: 0.18
+Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
+
+Release date: 10/05/2021
+Version: 0.26
 #>
 
 #Requires -Version 5
@@ -151,6 +159,24 @@ $Script:CurrentScriptFullName = $MyInvocation.MyCommand.Path
 $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
 
 
+##== Relaunch in X64 if needed
+if ( $PSHome -match 'syswow64' ) 
+    {
+        foreach($k in $MyInvocation.BoundParameters.keys)
+            {
+                switch($MyInvocation.BoundParameters[$k].GetType().Name)
+                    {
+                        "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $argsString += "-$k " } }
+                        "String"          { $argsString += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
+                        "Int32"           { $argsString += "-$k $($MyInvocation.BoundParameters[$k]) " }
+                        "Boolean"         { $argsString += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
+                    }
+            }
+        $Process = Start-Process -FilePath "$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:CurrentScriptFullName)`" $($argsString)" -Wait -NoNewWindow -PassThru
+        Exit $process.ExitCode
+    }
+
+
 ##== Functions
 
 #region Functions
@@ -187,7 +213,7 @@ function Write-log
             "file=`"`">"
 
         # Write the line to the log file
-        Add-Content -Path $Path -Value $Content -Encoding UTF8 -ErrorAction SilentlyContinue
+        $Content|Out-File -FilePath $Path -Encoding utf8 -Append -ErrorAction SilentlyContinue
     }
 
 
@@ -440,12 +466,12 @@ Function Initialize-Prereq
                 If ($null -eq (Get-module -Name "evergreen" -ListAvailable))
                     {
                         Write-log "Installing Evergreen Module"
-                        Install-Module "Evergreen" -MinimumVersion 2104.337 -force
+                        Install-Module "Evergreen" -force
                     }
                 Else 
                     {
                         Write-log "Updating Evergreen Module"
-                        Update-Module "evergreen" 
+                        Update-Module "evergreen"
                     }
 
                 Import-Module "Evergreen"    
@@ -958,405 +984,432 @@ Function Invoke-AsCurrentUser
  
 #endregion 
 
-##== Initializing Environement
-If (-not [string]::IsNullOrWhiteSpace($Log))
-    {$Script:Log = $Log}
-Else    
-    {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_"  + "Intaller.log")}
-
-$Script:TsEnv = New-Object PSObject
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -Value (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
-
-If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
+Try
     {
-        # Get user when in Windows Sandbox
-        If ((Get-CimInstance -Class Win32_UserAccount -Filter "LocalAccount=True AND Disabled=False AND Status='OK'").Name -eq 'WDAGUtilityAccount')
-            {$Script:TsEnv.CurrentLoggedOnUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
-        # Get Azure AD User
-        Else
+        ##== Initializing Environement
+        If (-not [string]::IsNullOrWhiteSpace($Log))
+            {$Script:Log = $Log}
+        Else    
+            {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_"  + "Intaller.log")}
+
+        $Script:TsEnv = New-Object PSObject
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -Value (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
+
+        If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
             {
-                If([string]::IsNullOrWhiteSpace($(Get-PSDrive -Name HKU -ErrorAction SilentlyContinue))){New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | out-null}
-                $UserReg = Get-Itemproperty "HKU:\*\Volatile Environment"
-                $CurrentLoggedOnUser = "$($UserReg.USERDOMAIN)\$($UserReg.USERNAME)"
-                $CurrentLoggedOnUserSID = split-path $UserReg.PSParentPath -leaf
-                If(Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $CurrentLoggedOnUserSID})
+                # Get user when in Windows Sandbox
+                If ((Get-CimInstance -Class Win32_UserAccount -Filter "LocalAccount=True AND Disabled=False AND Status='OK'").Name -eq 'WDAGUtilityAccount')
+                    {$Script:TsEnv.CurrentLoggedOnUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
+                # Get Azure AD User
+                Else
                     {
-                        $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
-                        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value $CurrentLoggedOnUserSID
-                        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUserUPN' -Value $(Get-ItemProperty -Path $((Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 | Where-Object { $_.Name -match $CurrentLoggedOnUserSID}).pspath) | Select-Object -ExpandProperty IdentityName)
+                        If([string]::IsNullOrWhiteSpace($(Get-PSDrive -Name HKU -ErrorAction SilentlyContinue))){New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | out-null}
+                        $UserReg = Get-Itemproperty "HKU:\*\Volatile Environment"
+                        $CurrentLoggedOnUser = "$($UserReg.USERDOMAIN)\$($UserReg.USERNAME)"
+                        $CurrentLoggedOnUserSID = split-path $UserReg.PSParentPath -leaf
+                        If(Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $CurrentLoggedOnUserSID})
+                            {
+                                $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
+                                $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value $CurrentLoggedOnUserSID
+                                $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUserUPN' -Value $(Get-ItemProperty -Path $((Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 | Where-Object { $_.Name -match $CurrentLoggedOnUserSID}).pspath) | Select-Object -ExpandProperty IdentityName)
+                            }
                     }
             }
-    }
 
-If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser)){Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
-
-
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value ([System.Environment]::MachineName)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value ([System.Environment]::OSVersion.VersionString)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX64' -Value ([System.Environment]::Is64BitOperatingSystem)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserExecutionContext' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsAdmin' -Value (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsTrustedInstaller' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464")
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[1]
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[0]
-If(-not ($Script:TsEnv.CurrentUserSID)){$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentLoggedOnUser)).Translate([System.Security.Principal.SecurityIdentifier]).value}
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $Script:TsEnv.CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
-$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath' -Value "HKU:\$($Script:TsEnv.CurrentUserSID)" 
+        If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser)){Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
 
 
-##== Local Constantes
-$AppDownloadDir = "$env:Public\Downloads" 
-
-$StartupTime = [DateTime]::Now
-Write-log 
-Write-log "***************************************************************************************************"
-Write-log "***************************************************************************************************"
-Write-log "Started processing time: [$StartupTime]"
-Write-log "Script Name: $CurrentScriptName"
-Write-log "Selected Application: $Application"
-If ($Uninstall -ne $true) {Write-log "Selected Application Architecture: $Architecture"}
-Write-log "***************************************************************************************************"
-Write-log "Log Path: $log"
-Write-log "System Host Name: $($Script:TsEnv.SystemHostName)"
-Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
-Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
-Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
-Write-Log "Logged on user: $($Script:TsEnv.CurrentLoggedOnUser)"
-If($Script:TsEnv.CurrentLoggedOnUserUPN) {Write-Log "Logged on user UPN: $($Script:TsEnv.CurrentLoggedOnUserUPN)"}
-Write-Log "Execution Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
-Write-Log "Execution Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
-Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value ([System.Environment]::MachineName)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSversion' -Value ([System.Environment]::OSVersion.VersionString)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemOSArchitectureIsX64' -Value ([System.Environment]::Is64BitOperatingSystem)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserExecutionContext' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsAdmin' -Value (New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsSystem' -Value $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserIsTrustedInstaller' -Value ([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464")
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserName' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[1]
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserDomain' -Value ($Script:TsEnv.CurrentLoggedOnUser).split("\")[0]
+        If(-not ($Script:TsEnv.CurrentUserSID)){$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value (New-Object System.Security.Principal.NTAccount($Script:TsEnv.CurrentLoggedOnUser)).Translate([System.Security.Principal.SecurityIdentifier]).value}
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserProfilePath' -Value (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $Script:TsEnv.CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistryPath' -Value "HKU:\$($Script:TsEnv.CurrentUserSID)" 
 
 
-If ($Uninstall -eq $true){Write-log "Selected Action: Uninstallation"}
-else
-    {
-        if (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+        ##== Local Constantes
+        $AppDownloadDir = "$env:Public\Downloads\$Application"
+        If ([String]::IsNullOrWhiteSpace($InstallSourcePath)){If(-not(Test-path $AppDownloadDir)){New-Item $AppDownloadDir -Force -ItemType Directory -ErrorAction SilentlyContinue|Out-Null}} 
+
+        $StartupTime = [DateTime]::Now
+        Write-log 
+        Write-log "***************************************************************************************************"
+        Write-log "***************************************************************************************************"
+        Write-log "Release $((Select-String -Pattern "Version:" -Path $Script:CurrentScriptFullName -CaseSensitive).Line[0])"
+        Write-log "Started processing time: [$StartupTime]"
+        Write-log "Script Name: $CurrentScriptName"
+        Write-log "Selected Application: $Application"
+        If ($Uninstall -ne $true) {Write-log "Selected Application Architecture: $Architecture"}
+        Write-log "***************************************************************************************************"
+        Write-log "Log Path: $log"
+        Write-log "System Host Name: $($Script:TsEnv.SystemHostName)"
+        Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
+        Write-log "System OS version: $($Script:TsEnv.SystemOSversion)"
+        Write-log "System OS Architecture is x64: $($Script:TsEnv.SystemOSArchitectureIsX64)"
+        Write-Log "Logged on user: $($Script:TsEnv.CurrentLoggedOnUser)"
+        If($Script:TsEnv.CurrentLoggedOnUserUPN) {Write-Log "Logged on user UPN: $($Script:TsEnv.CurrentLoggedOnUserUPN)"}
+        Write-Log "Execution Context is Admin: $($Script:TsEnv.CurrentUserIsAdmin)" 
+        Write-Log "Execution Context is System: $($Script:TsEnv.CurrentUserIsSystem)"
+        Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
+
+
+        If ($Uninstall -eq $true){Write-log "Selected Action: Uninstallation"}
+        else
             {
-                Write-log "Selected Action: Installation from offline source"
-                Write-log "Install Option: Offline location $InstallSourcePath"
-                $OfflineInstall = $true
-            }    
-        Else
-            {Write-log "Selected Action: Installation"}
-    }
+                if (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+                    {
+                        Write-log "Selected Action: Installation from offline source"
+                        Write-log "Install Option: Offline location $InstallSourcePath"
+                        $OfflineInstall = $true
+                    }    
+                Else
+                    {Write-log "Selected Action: Installation"}
+            }
 
-If ($DisableUpdate -eq $true){Write-log "Install Option: Disabling update feature"}
+        If ($DisableUpdate -eq $true){Write-log "Install Option: Disabling update feature"}
 
-if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
-    {
-        Write-log "Selected Action: Predownloading without installation"
-        Write-log "Install Option: Download location $PreDownloadPath"
-    }
-
-
-##== Init        
-If ($Uninstall -eq $true){Initialize-Prereq -NoModuleUpdate}
-Else {Initialize-Prereq}
-
-##== Download APP Data
-Write-Log "Retriving data from Github for Application $Application"
-$AppDataCode = Get-GithubContent -URI "$GithubRepo/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$Application-Data.ps1"
-Try 
-    {
-        If ($AppDataCode -ne $False) 
-            {
-                $AppDataScriptPath = "$($env:temp)\Github-GoogleChrome-Data.ps1"
-                $AppDataCode|Out-File $AppDataScriptPath
-                ."$AppDataScriptPath"
-            } 
-        Else
-            {Write-log "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
-    }
-Catch 
-    {
-        Write-log "[Error] Unable to execute $Application data garthering, logical error occurs, Aborting !!!" -Type 3
-        Write-log $Error[0].InvocationInfo.PositionMessage.ToString() -type 3
-        Write-log $Error[0].Exception.Message.ToString() -type 3
-        Exit
-    }
-
-##############################
-#### Pre-Script
-##############################
-If ($PreScriptURI -and $GithubToken)
-    {
-        Write-log "Invoking Prescript"
-        $PreScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
-        Try {Invoke-Command $PreScript}
-        Catch {Write-log "[Error] Prescript Failed to execute" -Type 3}
-    }
-
-
-##############################
-#### Application installation
-##############################
-
-##== Gather Informations
-$Script:AppInfo = Get-AppInfo
-$Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
-Get-AppInstallStatus
-
-If ($Script:AppInfo.AppIsInstalled)
-    {Write-log "Version $($Script:AppInfo.AppInstalledVersion) of $Application detected!"}
-Else
-    {
-        $AppInstallNow = $true
-        Write-log "No Installed version of $Application detected!"
-    }
-
-
-If ($Uninstall -ne $true)
-    {
-        If ($InstallSourcePath){$AppInstallNow = $true}
-        
-        ##==Check for latest version
-        $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
-
-        ##==Check if we need to update
-        $AppUpdateStatus = Get-AppUpdateStatus
-        If ($AppUpdateStatus)
-            {
-                $AppInstallNow = $true
-                Write-log "New version of $Application detected! Release version: $($Script:AppEverGreenInfo.Version)"
-            } 
-        Else 
-            {
-                $AppInstallNow = $False
-                Write-log "Version Available online is similar to installed version, Nothing to install !"
-            } 
-
-
-        ##==Download
         if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
             {
-                If (-not(Test-path $PreDownloadPath))
-                    {
-                        $Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue
-                        If ([string]::IsNullOrWhiteSpace($Iret)){Write-log "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
-                    }
-                
-                $AppDownloadDir = $PreDownloadPath
-                $AppInstallNow = $False
-            }
-
-        If (([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True) -or (-not([String]::IsNullOrWhiteSpace($PreDownloadPath))))
-            {
-                Write-log "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
-                Write-log "Download Url: $($Script:AppEverGreenInfo.uri)"
-                Write-log "Downloading installer for $Application - $Architecture"
-
-                $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
-                $InstallSourcePath = ($InstallSourcePath.Split("=")[1]).replace("}","")
-
-                Write-log "Successfully downloaded $Application to folder $InstallSourcePath"
-            }
-
-        
-        ##== Uninstall before Update if requiered
-        If ($Script:AppInfo.AppIsInstalled -eq $True -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
-            {
-                If (($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
-                    {
-                        ##== Uninstall
-                        Write-log "Uninstalling $Application before reinstall/Update !"
-                        $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
-                        If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
-                            {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully before reinstall/Update!!!"}
-                        Else
-                            {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall before new update !!!" -Type 2}
-
-                        ##== Additionnal removal action
-                        Write-log "Uninstalling addintionnal items before reinstall/Update !"
-                        Invoke-AdditionalUninstall
-                    }
+                Write-log "Selected Action: Predownloading without installation"
+                Write-log "Install Option: Download location $PreDownloadPath"
             }
 
 
-        ##==Install
-        if ($AppInstallNow -eq $True)
+        ##== Init        
+        If ($Uninstall -eq $true){Initialize-Prereq -NoModuleUpdate}
+        Else {Initialize-Prereq}
+
+        ##== Download APP Data
+        Write-Log "Retriving data from Github for Application $Application"
+        $AppDataCode = Get-GithubContent -URI "$GithubRepo/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$Application-Data.ps1"
+        Try 
             {
-                ## Rebuild Parametrers
-                If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+                If ($AppDataCode -ne $False) 
                     {
-                        Write-log "Download directory: $InstallSourcePath" 
-                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
-                            {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
-                        Else
-                            {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
-                    }
+                        $AppDataScriptPath = "$($env:temp)\Github-$Application-Data.ps1"
+                        $AppDataCode|Out-File $AppDataScriptPath
+                        ."$AppDataScriptPath"
+                        Write-log "Temporary data for Application $Application stored in $AppDataScriptPath"
+                            
+                    } 
                 Else
-                    {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
-                
-                ## Execute Intall Program
-                write-log "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
-                $Iret = (Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
-                If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
-                    {Write-log "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"}
-                Else
-                    {Write-log "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
-
-
-                ## Clean Download Folder
-                if ([String]::IsNullOrWhiteSpace($PreDownloadPath) -and $OfflineInstall -ne $true )
-                    {
-                        Write-log "cleaning Download folder"
-                        Remove-Item $InstallSourcePath -Force -ErrorAction SilentlyContinue
-                    }
+                    {Write-log "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
             }
-
- 
-        ##== Remove Update capabilities
-        If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
+        Catch 
             {
-                Write-log "Disabling $Application update feature !"
-                Invoke-DisableUpdateCapability
+                Write-log "[Error] Unable to execute $Application data garthering, logical error occurs, Aborting !!!" -Type 3
+                Write-log $Error[0].InvocationInfo.PositionMessage.ToString() -type 3
+                Write-log $Error[0].Exception.Message.ToString() -type 3
+                Exit
+            }
+
+        ##############################
+        #### Pre-Script
+        ##############################
+        If ($PreScriptURI -and $GithubToken)
+            {
+                Write-log "Invoking Prescript"
+                $PreScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
+                Try {Invoke-Command $PreScript}
+                Catch {Write-log "[Error] Prescript Failed to execute" -Type 3}
             }
 
 
-        ##== Tag in registry
-        $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
-        If (-not(Test-path $RegTag)){New-item -Path $RegTag -Force|Out-Null}
-        If (-not(Test-path "$RegTag\$Application")){New-item -Path "$RegTag\$Application" -Force|Out-Null}
-        New-ItemProperty -Path "$RegTag\$Application" -Name "Install Date" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
-        New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
-        New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
-        New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
+        ##############################
+        #### Application installation
+        ##############################
 
+        ##== Gather Informations
+        $Script:AppInfo = Get-AppInfo
+        $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
+        Get-AppInstallStatus
 
-        ##== Create Scheduled task
-        $ScriptBlock_UpdateEval = {
-            ##== Functions
-            function Write-log 
-                {
-                     Param(
-                          [parameter()]
-                          [String]$Path="C:\Windows\Logs\EvergreenApplication\ApplicationUpdateEvaluation.log",
-
-                          [parameter(Position=0)]
-                          [String]$Message,
-
-                          [parameter()]
-                          [String]$Component="ApplicationUpdateEvaluation",
-
-		                  #Severity  Type(1 - Information, 2- Warning, 3 - Error)
-		                  [parameter(Mandatory=$False)]
-		                  [ValidateRange(1,3)]
-		                  [Single]$Type = 1
-                    )
-
-		            # Create Folder path if not present
-                    $oFolderPath = Split-Path $Path
-		            If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
-
-                    # Create a log entry
-                    $Content = "<![LOG[$Message]LOG]!>" +`
-                        "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
-                        "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
-                        "component=`"$Component`" " +`
-                        "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
-                        "type=`"$Type`" " +`
-                        "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
-                        "file=`"`">"
-
-                    # Write the line to the log file
-                    Add-Content -Path $Path -Value $Content -Encoding UTF8 -ErrorAction SilentlyContinue
-                }
-
-
-            ##== Main
-            $StartupTime = [DateTime]::Now
-            Write-log 
-            Write-log "***************************************************************************************************"
-            Write-log "***************************************************************************************************"
-            Write-log "Started processing time: [$StartupTime]"
-            Write-log "Script Name: ApplicationUpdateEvaluation"
-            Write-log "***************************************************************************************************"
-
-            $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
-            $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
-
-            ForEach ($Regitem in $EverGreenApps)
-                {
-                    $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
-                    If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
-                        {
-                            Write-log "Application : $Regitem"
-                            $AppInstalledVersion = $AppInfo.DisplayVersion
-                            $AppInstalledArchitecture = $AppInfo.Architecture
-                            Write-log "Installed version : $AppInstalledVersion"
-
-                            Write-log "Checking for Newer version online..."
-                            $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
-                            Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
-
-                            If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
-                                {
-                                    Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
-                                    Write-log "$Regitem application status changed to Obsolete !"
-                                }
-                        }
-                }
-
-            $FinishTime = [DateTime]::Now
-            Write-log "***************************************************************************************************"
-            Write-log "Finished processing time: [$FinishTime]"
-            Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
-            Write-log "All Operations Finished!! Exit !"
-            Write-log "***************************************************************************************************"  
-        }
-
-        $TaskName = "EverGreen Update Evaluation"
-        $SchedulerPath = "\Microsoft\Windows\PowerShell\ScheduledJobs"
-        $trigger = New-JobTrigger -Daily -At 12:00
-        $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
-
-        $task = Get-ScheduledJob -Name $taskName  -ErrorAction SilentlyContinue
-        if ($null -ne $task){Unregister-ScheduledJob $task -Confirm:$false}
-
-        Register-ScheduledJob -Name $taskName  -Trigger $trigger  -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval|Out-Null
-        $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount  -RunLevel Highest
-        Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
-        write-log "Update Evaluation Scheduled task installed successfully under name $Taskname!"
-        
-    }
-Else
-    {
-        If ($Script:AppInfo.AppIsInstalled -eq $False)
-            {Write-log "Application $Application is not installed, nothing to uninstall ! All operation finished!!"}
+        If ($Script:AppInfo.AppIsInstalled)
+            {Write-log "Version $($Script:AppInfo.AppInstalledVersion) of $Application detected!"}
         Else
             {
-                ##== Uninstall
-                $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
-                If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
-                    {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
-                Else
-                    {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
-
-                ##== Additionnal removal action
-                Write-log "Uninstalling addintionnal items !"
-                Invoke-AdditionalUninstall
-                Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
+                $AppInstallNow = $true
+                Write-log "No Installed version of $Application detected!"
             }
-    }
 
 
-##############################
-#### Post-Script
-##############################
-If ($PostScriptURI -and $GithubToken)
+        If ($Uninstall -ne $true)
+            {
+                If ($InstallSourcePath){$AppInstallNow = $true}
+        
+                ##==Check for latest version
+                $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
+
+                ##==Check if we need to update
+                $AppUpdateStatus = Get-AppUpdateStatus
+                If ($AppUpdateStatus)
+                    {
+                        $AppInstallNow = $true
+                        Write-log "New version of $Application detected! Release version: $($Script:AppEverGreenInfo.Version)"
+                    } 
+                Else 
+                    {
+                        $AppInstallNow = $False
+                        Write-log "Version Available online is similar to installed version, Nothing to install !"
+                    } 
+
+
+                ##==Download
+                if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
+                    {
+                        $PreDownloadPath = "$PreDownloadPath\$Application"
+                        If (-not(Test-path $PreDownloadPath))
+                            {
+                                $Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue
+                                If ([string]::IsNullOrWhiteSpace($Iret)){Write-log "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
+                            }
+                
+                        $AppDownloadDir = $PreDownloadPath
+                        $AppInstallNow = $False
+                    }
+
+                If (([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True) -or (-not([String]::IsNullOrWhiteSpace($PreDownloadPath))))
+                    {
+                        Write-log "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
+                        Write-log "Download Url: $($Script:AppEverGreenInfo.uri)"
+                        Write-log "Downloading installer for $Application - $Architecture"
+                        $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
+                        Write-log "Successfully downloaded $Application to folder $InstallSourcePath"
+                    }
+
+        
+                ##== Uninstall before Update if requiered
+                If ($Script:AppInfo.AppIsInstalled -eq $True -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
+                    {
+                        If (($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
+                            {
+                                ##== Uninstall
+                                Write-log "Uninstalling $Application before reinstall/Update !"
+                                $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
+                                If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
+                                    {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully before reinstall/Update!!!"}
+                                Else
+                                    {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall before new update !!!" -Type 2}
+
+                                ##== Additionnal removal action
+                                Write-log "Uninstalling addintionnal items before reinstall/Update !"
+                                Invoke-AdditionalUninstall
+                                Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
+                            }
+                    }
+
+
+                ##==Install
+                if ($AppInstallNow -eq $True)
+                    {
+                        ## Rebuild Parametrers
+                        If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+                            {
+                                Write-log "Download directory: $InstallSourcePath" 
+                                If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
+                                    {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
+                                Else
+                                    {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
+                            }
+                        Else
+                            {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
+                
+                        ## Execute Intall Program
+                        write-log "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
+                        $Iret = (Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
+                        If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
+                            {
+                                Write-log "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"
+                                $Script:AppInfo.AppArchitecture = $Architecture.ToUpper()
+                                $Script:AppInfo.AppInstalledVersion = $($Script:AppEverGreenInfo.version)
+                            }
+                        Else
+                            {Write-log "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+
+
+                        ## Clean Download Folder
+                        if ([String]::IsNullOrWhiteSpace($PreDownloadPath) -and $OfflineInstall -ne $true )
+                            {
+                                Write-log "cleaning Download folder"
+                                If (test-path $InstallSourcePath){Remove-Item $InstallSourcePath -recurse -Force -Confirm:$false -ErrorAction SilentlyContinue}
+                                If (test-path "$AppDownloadDir\$AppInstaller"){Remove-Item "$AppDownloadDir\$AppInstaller" -recurse -Force -Confirm:$false -ErrorAction SilentlyContinue}
+                            }
+                    }
+
+ 
+                ##== Remove Update capabilities
+                If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
+                    {
+                        Write-log "Disabling $Application update feature !"
+                        Invoke-DisableUpdateCapability
+                    }
+
+
+                ##== Tag in registry
+                Write-log "Tagging in the registry !"
+                $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
+                If (-not(Test-path $RegTag)){New-item -Path $RegTag -Force|Out-Null}
+                If (-not(Test-path "$RegTag\$Application")){New-item -Path "$RegTag\$Application" -Force|Out-Null}
+                New-ItemProperty -Path "$RegTag\$Application" -Name "Install Date" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
+                New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
+                New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
+                New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
+
+                ##== Create Scheduled task
+                Write-log "Creating Update Evaluation Scheduled Task !"
+                $ScriptBlock_UpdateEval = {
+                    ##== Functions
+                    function Write-log 
+                        {
+                             Param(
+                                  [parameter()]
+                                  [String]$Path="C:\Windows\Logs\EvergreenApplication\ApplicationUpdateEvaluation.log",
+
+                                  [parameter(Position=0)]
+                                  [String]$Message,
+
+                                  [parameter()]
+                                  [String]$Component="ApplicationUpdateEvaluation",
+
+		                          #Severity  Type(1 - Information, 2- Warning, 3 - Error)
+		                          [parameter(Mandatory=$False)]
+		                          [ValidateRange(1,3)]
+		                          [Single]$Type = 1
+                            )
+
+		                    # Create Folder path if not present
+                            $oFolderPath = Split-Path $Path
+		                    If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
+
+                            # Create a log entry
+                            $Content = "<![LOG[$Message]LOG]!>" +`
+                                "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
+                                "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
+                                "component=`"$Component`" " +`
+                                "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
+                                "type=`"$Type`" " +`
+                                "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
+                                "file=`"`">"
+
+                            # Write the line to the log file
+                            $Content|Out-File $Path -Append -ErrorAction SilentlyContinue -Encoding utf8
+                        }
+
+
+                    ##== Main
+                    $StartupTime = [DateTime]::Now
+                    Write-log 
+                    Write-log "***************************************************************************************************"
+                    Write-log "***************************************************************************************************"
+                    Write-log "Started processing time: [$StartupTime]"
+                    Write-log "Script Name: ApplicationUpdateEvaluation"
+                    Write-log "***************************************************************************************************"
+
+                    $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
+                    If (test-path $RegPath)
+                        {
+                            $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
+
+                            ForEach ($Regitem in $EverGreenApps)
+                                {
+                                    $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
+                                    If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
+                                        {
+                                            Write-log "Application : $Regitem"
+                                            $AppInstalledVersion = $AppInfo.DisplayVersion
+                                            $AppInstalledArchitecture = $AppInfo.Architecture
+                                            Write-log "Installed version : $AppInstalledVersion"
+
+                                            Write-log "Checking for Newer version online..."
+                                            $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
+                                            Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
+
+                                            If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                                {
+                                                    Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
+                                                    Write-log "$Regitem application status changed to Obsolete !"
+                                                }
+                                        }
+                                }
+                            }
+
+                    $FinishTime = [DateTime]::Now
+                    Write-log "***************************************************************************************************"
+                    Write-log "Finished processing time: [$FinishTime]"
+                    Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
+                    Write-log "All Operations Finished!! Exit !"
+                    Write-log "***************************************************************************************************"  
+                }
+
+                $TaskName = "EverGreen Update Evaluation"
+                $SchedulerPath = "\Microsoft\Windows\PowerShell\ScheduledJobs"
+                $trigger = New-JobTrigger -Daily -At 12:00
+                $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
+
+                $password = ConvertTo-SecureString (New-Guid).Guid -AsPlainText -Force
+                $user = New-LocalUser "service.scheduler" -Password $Password -Description "For scheduling in tasks from system account"
+                $credentials = New-Object System.Management.Automation.PSCredential($user.name, $password)
+
+
+                $task = Get-ScheduledJob -Name $taskName  -ErrorAction SilentlyContinue
+                if ($null -ne $task){Unregister-ScheduledJob $task -Confirm:$false}
+
+                Register-ScheduledJob -Name $taskName  -Trigger $trigger -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval -Credential $credentials|Out-Null
+                $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+                Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
+                Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue
+                write-log "Update Evaluation Scheduled task installed successfully under name $Taskname!"
+            }
+        Else
+            {
+                If ($Script:AppInfo.AppIsInstalled -eq $False)
+                    {Write-log "Application $Application is not installed, nothing to uninstall ! All operation finished!!"}
+                Else
+                    {
+                        ##== Uninstall
+                        $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
+                        If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
+                            {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
+                        Else
+                            {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
+
+                        ##== Additionnal removal action
+                        Write-log "Uninstalling addintionnal items !"
+                        Invoke-AdditionalUninstall
+                        Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
+                    }
+            }
+
+
+        ##############################
+        #### Post-Script
+        ##############################
+        If ($PostScriptURI -and $GithubToken)
+            {
+                Write-log "Invoking Postscript"
+                $PostScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
+                Try {Invoke-Command $PostScript}
+                Catch {Write-log "[Error] Postscript Failed to execute" -Type 3}
+            }
+
+        $FinishTime = [DateTime]::Now
+        Write-log "***************************************************************************************************"
+        Write-log "Finished processing time: [$FinishTime]"
+        Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
+        Write-log "All Operations for $Application Finished!! Exit !"
+        Write-log "***************************************************************************************************" 
+     }   
+Catch
     {
-        Write-log "Invoking Postscript"
-        $PostScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
-        Try {Invoke-Command $PostScript}
-        Catch {Write-log "[Error] Postscript Failed to execute" -Type 3}
-    }
-
-$FinishTime = [DateTime]::Now
-Write-log "***************************************************************************************************"
-Write-log "Finished processing time: [$FinishTime]"
-Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
-Write-log "All Operations for $Application Finished!! Exit !"
-Write-log "***************************************************************************************************"    
+        Write-log "[ERROR] Fatal Error, the program has stopped !!!" -Type 3
+        Write-log $Error[0].InvocationInfo.PositionMessage.ToString() -type 3
+        Write-log $Error[0].Exception.Message.ToString() -type 3
+        Exit 99
+    }           
