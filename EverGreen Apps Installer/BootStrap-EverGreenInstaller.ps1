@@ -81,8 +81,8 @@ https://z-nerd.com/blog/2020/03/31-intune-win32-apps-powershell-script-installer
 
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 10/05/2021
-Version: 0.26
+Release date: 14/05/2021
+Version: 0.28
 #>
 
 #Requires -Version 5
@@ -157,24 +157,13 @@ $ErrorActionPreference = "stop"
 $Script:CurrentScriptName = $MyInvocation.MyCommand.Name
 $Script:CurrentScriptFullName = $MyInvocation.MyCommand.Path
 $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
+#Set-PSBreakpoint -Line 978 -Script $Script:CurrentScriptFullName
 
-
-##== Relaunch in X64 if needed
-if ( $PSHome -match 'syswow64' ) 
-    {
-        foreach($k in $MyInvocation.BoundParameters.keys)
-            {
-                switch($MyInvocation.BoundParameters[$k].GetType().Name)
-                    {
-                        "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $argsString += "-$k " } }
-                        "String"          { $argsString += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
-                        "Int32"           { $argsString += "-$k $($MyInvocation.BoundParameters[$k]) " }
-                        "Boolean"         { $argsString += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
-                    }
-            }
-        $Process = Start-Process -FilePath "$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:CurrentScriptFullName)`" $($argsString)" -Wait -NoNewWindow -PassThru
-        Exit $process.ExitCode
-    }
+#==Log Init
+If (-not [string]::IsNullOrWhiteSpace($Log))
+    {$Script:Log = $Log}
+Else    
+    {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_"  + "Intaller.log")}
 
 
 ##== Functions
@@ -984,14 +973,36 @@ Function Invoke-AsCurrentUser
  
 #endregion 
 
+
+##== Relaunch in X64 if needed
+if ( $PSHome -match 'syswow64' ) 
+    {
+        Write-log "#############################################"
+        Write-log "Execution Engine was detected as X86 ($PSHOME) - Session ID is $PID"
+        foreach($k in $MyInvocation.BoundParameters.keys)
+            {
+                switch($MyInvocation.BoundParameters[$k].GetType().Name)
+                    {
+                        "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $argsString += "-$k " } }
+                        "String"          { $argsString += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
+                        "Int32"           { $argsString += "-$k $($MyInvocation.BoundParameters[$k]) " }
+                        "Boolean"         { $argsString += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
+                    }
+            }
+        Write-log "Relaunching Script in x64 context with the following command: $ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe -ArgumentList -File `"$($Script:CurrentScriptFullName)`" $($argsString) -NoNewWindow -PassThru -Wait"
+        Write-log "#############################################"
+        $Process = Start-Process -FilePath "$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:CurrentScriptFullName)`" $($argsString)" -NoNewWindow -PassThru -Wait
+        Write-log "#############################################"
+        Write-log "Exiting x86 session with ID $PID"       
+        Write-log "#############################################"
+        Exit $($process.ExitCode)
+    }
+
+
+
 Try
     {
         ##== Initializing Environement
-        If (-not [string]::IsNullOrWhiteSpace($Log))
-            {$Script:Log = $Log}
-        Else    
-            {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_"  + "Intaller.log")}
-
         $Script:TsEnv = New-Object PSObject
         $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -Value (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
 
@@ -1048,6 +1059,8 @@ Try
         Write-log "Selected Application: $Application"
         If ($Uninstall -ne $true) {Write-log "Selected Application Architecture: $Architecture"}
         Write-log "***************************************************************************************************"
+        Write-log "Powershell Home: $PSHOME"
+        Write-log "Current Session ID: $PID"
         Write-log "Log Path: $log"
         Write-log "System Host Name: $($Script:TsEnv.SystemHostName)"
         Write-log "System IP Address: $($Script:TsEnv.SystemIPAddress)"
@@ -1270,7 +1283,7 @@ Try
                         {
                              Param(
                                   [parameter()]
-                                  [String]$Path="C:\Windows\Logs\EvergreenApplication\ApplicationUpdateEvaluation.log",
+                                  [String]$Path="C:\Windows\Logs\EvergreenApplication\Evergreen-ApplicationUpdateEvaluation.log",
 
                                   [parameter(Position=0)]
                                   [String]$Message,
