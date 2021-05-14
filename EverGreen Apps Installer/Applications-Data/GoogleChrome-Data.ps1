@@ -81,11 +81,20 @@ Function Invoke-AdditionalUninstall
                 If ([String]::IsNullOrWhiteSpace($CurrentUser))
                     {
                         # Get user when in Windows Sandbox
-                        If ((Get-LocalUser WDAGUtilityAccount).Enabled)
+                        If ((Get-CimInstance -Class Win32_UserAccount -Filter "LocalAccount=True AND Disabled=False AND Status='OK'").Name -eq 'WDAGUtilityAccount')
                             {$CurrentUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
+                        # Get Azure AD User
                         Else
-                            {Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
+                            {
+                                If([string]::IsNullOrWhiteSpace($(Get-PSDrive -Name HKU -ErrorAction SilentlyContinue))){New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | out-null}
+                                $UserReg = Get-Itemproperty "HKU:\*\Volatile Environment"
+                                $CurrentLoggedOnUser = "$($UserReg.USERDOMAIN)\$($UserReg.USERNAME)"
+                                $CurrentLoggedOnUserSID = split-path $UserReg.PSParentPath -leaf
+                                If(Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $CurrentLoggedOnUserSID}){$CurrentUser = $CurrentLoggedOnUser}
+                            }
                     }
+
+                If ([String]::IsNullOrWhiteSpace($CurrentUser)){Write-log "[ERROR] Unable to detect current user, Aborting...." ; Return}
 
                 $CurrentUserSID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).value
                 $CurrentUserProfilePath = (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'| Where-Object {$PSItem.pschildname -eq $CurrentUserSID}|Get-ItemPropertyValue -Name ProfileImagePath)

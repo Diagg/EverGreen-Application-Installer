@@ -1,4 +1,4 @@
-﻿Start-Transcript -Path "C:\Windows\Logs\Evergreen-DetectionRules.log" -Append -Force -ErrorAction SilentlyContinue -
+﻿Start-Transcript -Path "C:\Windows\Logs\Evergreen-DetectionRules.log" -Append -Force -ErrorAction SilentlyContinue
 $Application = "GoogleChrome"
 Write-host "###########################################################"
 Write-host "Executing detection rules for application $Application"
