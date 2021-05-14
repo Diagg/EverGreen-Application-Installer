@@ -82,7 +82,7 @@ https://z-nerd.com/blog/2020/03/31-intune-win32-apps-powershell-script-installer
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
 Release date: 14/05/2021
-Version: 0.28
+Version: 0.29
 #>
 
 #Requires -Version 5
