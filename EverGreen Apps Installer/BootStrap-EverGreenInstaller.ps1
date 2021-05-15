@@ -81,8 +81,8 @@ https://z-nerd.com/blog/2020/03/31-intune-win32-apps-powershell-script-installer
 
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 14/05/2021
-Version: 0.29
+Release date: 15/05/2021
+Version: 0.30
 #>
 
 #Requires -Version 5
@@ -128,6 +128,11 @@ param(
         [Parameter(ParameterSetName = 'Offline')]
         [Parameter(ParameterSetName = 'Predownload')]        
         [string]$Log,
+
+        [Parameter(ParameterSetName = 'Online')]
+        [Parameter(ParameterSetName = 'Offline')]
+        [Parameter(ParameterSetName = 'Predownload')]        
+        [string]$Language = $Null,
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
@@ -1110,7 +1115,6 @@ Try
                         $AppDataCode|Out-File $AppDataScriptPath
                         ."$AppDataScriptPath"
                         Write-log "Temporary data for Application $Application stored in $AppDataScriptPath"
-                            
                     } 
                 Else
                     {Write-log "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
@@ -1140,8 +1144,7 @@ Try
         ##############################
 
         ##== Gather Informations
-        $Script:AppInfo = Get-AppInfo
-        $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppInstallArchitecture' -Value $Architecture.ToUpper()
+        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate [bool]$DisableUpdate
         Get-AppInstallStatus
 
         If ($Script:AppInfo.AppIsInstalled)
@@ -1159,6 +1162,8 @@ Try
         
                 ##==Check for latest version
                 $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
+                If (-not([string]::IsNullOrWhiteSpace($Language))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Architecture -eq $Language}
+
 
                 ##==Check if we need to update
                 $AppUpdateStatus = Get-AppUpdateStatus
@@ -1232,7 +1237,10 @@ Try
                                     {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
                             }
                         Else
-                            {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")}
+                            {
+                                $Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")
+                                $Script:AppInfo.AppInstallCMD = $Script:AppInfo.AppInstallCMD.replace("##APP##","$AppDownloadDir\$AppInstaller")
+                            }
                 
                         ## Execute Intall Program
                         write-log "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"

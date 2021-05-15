@@ -2,7 +2,7 @@
 
 Function Get-AppInfo
     {
-
+        
         param (
             [Parameter(Mandatory = $false)]
             [string]$Architecture,
@@ -10,23 +10,30 @@ Function Get-AppInfo
             [string]$Language,
             [Parameter(Mandatory = $false)]
             [bool]$DisableUpdate
-        )
-         
+        )          
+  
+        If ($DisableUpdate)
+            {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1 UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
+        Else
+            {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1'} 
+            
+        If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}       
+        
         [PSCustomObject]@{
-            AppName = "GoogleChrome"
-            AppVendor = "Google"
-            AppFiendlyName = "Chrome"
+            AppName = "AdobeAcrobatReaderDC"
+            AppVendor = "Adobe"
+            AppFiendlyName = "Acrobat Reader DC"
             AppInstallName = "Google Chrome"
-            AppExtension = ".msi"
+            AppExtension = ".exe"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
-            AppInstallCMD = "MsiExec"
-            AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
+            AppInstallCMD = "##APP##"
+            AppInstallParameters = $InstParam
             AppInstallSuccessReturnCodes = @(0,3010,1641)
             AppUninstallSuccessReturnCodes = @(0,3010,1641)
-            AppMustUninstallBeforeUpdate = $false
+            AppMustUninstallBeforeUpdate = $true
             AppMustUninstallOnArchChange = $true
         }
     }
