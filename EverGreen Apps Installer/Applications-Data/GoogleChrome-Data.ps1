@@ -80,6 +80,12 @@ Function Get-AppUpdateStatus
     }
 
 
+Function Invoke-AdditionalInstall
+    {
+
+    }
+
+
 Function Invoke-AdditionalUninstall
     {
         $UninstallFeature_ScriptBlock = { 

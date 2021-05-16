@@ -81,8 +81,8 @@ https://z-nerd.com/blog/2020/03/31-intune-win32-apps-powershell-script-installer
 
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 15/05/2021
-Version: 0.30
+Release date: 16/05/2021
+Version: 0.31
 #>
 
 #Requires -Version 5
@@ -1144,7 +1144,7 @@ Try
         ##############################
 
         ##== Gather Informations
-        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate [bool]$DisableUpdate
+        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent
         Get-AppInstallStatus
 
         If ($Script:AppInfo.AppIsInstalled)
@@ -1162,7 +1162,7 @@ Try
         
                 ##==Check for latest version
                 $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
-                If (-not([string]::IsNullOrWhiteSpace($Language))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Architecture -eq $Language}
+                If (-not([string]::IsNullOrWhiteSpace($Language))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Language -eq $Language}
 
 
                 ##==Check if we need to update
@@ -1199,7 +1199,7 @@ Try
                         Write-log "Download Url: $($Script:AppEverGreenInfo.uri)"
                         Write-log "Downloading installer for $Application - $Architecture"
                         $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
-                        Write-log "Successfully downloaded $Application to folder $InstallSourcePath"
+                        Write-log "Successfully downloaded $( Split-Path $InstallSourcePath -Leaf) to folder $(Split-Path $InstallSourcePath)"
                     }
 
         
@@ -1228,19 +1228,16 @@ Try
                 if ($AppInstallNow -eq $True)
                     {
                         ## Rebuild Parametrers
-                        If (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
+                        Write-log "Download directory: $InstallSourcePath" 
+                        If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
                             {
-                                Write-log "Download directory: $InstallSourcePath" 
-                                If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
-                                    {$Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)}
-                                Else
-                                    {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
+                                $Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)
+                                $Script:AppInfo.AppInstallCMD  = $Script:AppInfo.AppInstallCMD.replace("##APP##",$InstallSourcePath)
                             }
                         Else
-                            {
-                                $Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##","$AppDownloadDir\$AppInstaller")
-                                $Script:AppInfo.AppInstallCMD = $Script:AppInfo.AppInstallCMD.replace("##APP##","$AppDownloadDir\$AppInstaller")
-                            }
+                            {Write-log "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
+
+
                 
                         ## Execute Intall Program
                         write-log "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
@@ -1254,13 +1251,15 @@ Try
                         Else
                             {Write-log "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
 
+                        ##== Additionnal removal action
+                        Write-log "Installing additionnal items !"
+                        Invoke-AdditionalInstall
 
                         ## Clean Download Folder
                         if ([String]::IsNullOrWhiteSpace($PreDownloadPath) -and $OfflineInstall -ne $true )
                             {
                                 Write-log "cleaning Download folder"
                                 If (test-path $InstallSourcePath){Remove-Item $InstallSourcePath -recurse -Force -Confirm:$false -ErrorAction SilentlyContinue}
-                                If (test-path "$AppDownloadDir\$AppInstaller"){Remove-Item "$AppDownloadDir\$AppInstaller" -recurse -Force -Confirm:$false -ErrorAction SilentlyContinue}
                             }
                     }
 
@@ -1402,7 +1401,7 @@ Try
                             {Write-log "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
 
                         ##== Additionnal removal action
-                        Write-log "Uninstalling addintionnal items !"
+                        Write-log "Uninstalling additionnal items !"
                         Invoke-AdditionalUninstall
                         Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
                     }

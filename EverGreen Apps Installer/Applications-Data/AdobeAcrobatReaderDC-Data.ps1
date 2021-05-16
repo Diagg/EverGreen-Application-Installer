@@ -15,7 +15,7 @@ Function Get-AppInfo
         If ($DisableUpdate)
             {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1 UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
         Else
-            {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1'} 
+            {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0'} 
             
         If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}       
         
@@ -23,7 +23,7 @@ Function Get-AppInfo
             AppName = "AdobeAcrobatReaderDC"
             AppVendor = "Adobe"
             AppFiendlyName = "Acrobat Reader DC"
-            AppInstallName = "Google Chrome"
+            AppInstallName = "Adobe Acrobat Reader DC"
             AppExtension = ".exe"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -84,6 +84,12 @@ Function Get-AppUpdateStatus
             {Return $True}
         Else        
             {Return $False}
+    }
+
+
+Function Invoke-AdditionalInstall
+    {
+
     }
 
 
