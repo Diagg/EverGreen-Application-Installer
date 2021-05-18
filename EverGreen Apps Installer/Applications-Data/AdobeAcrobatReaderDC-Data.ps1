@@ -2,20 +2,20 @@
 
 Function Get-AppInfo
     {
-        
         param (
             [Parameter(Mandatory = $false)]
             [string]$Architecture,
             [Parameter(Mandatory = $false)]
             [string]$Language,
             [Parameter(Mandatory = $false)]
-            [bool]$DisableUpdate
+            [bool]$DisableUpdate,
+            [Parameter(Mandatory = $false)]
+            [bool]$EnterpriseMode
         )          
-  
-        If ($DisableUpdate)
-            {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1 UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
-        Else
-            {$InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0'} 
+        
+        $InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0'
+        If ($DisableUpdate){$InstParam = $InstParam + ' UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
+        If ($EnterpriseMode){$InstParam = $InstParam + ' DISABLEDESKTOPSHORTCUT=1'} 
             
         If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}       
         
@@ -90,9 +90,11 @@ Function Get-AppUpdateStatus
 Function Invoke-AdditionalInstall
     {
         [Parameter(Mandatory = $false)]
-        [string]$SetAsDefault,
+        [bool]$SetAsDefault,
         [Parameter(Mandatory = $false)]
-        [string]$EnterpriseMode
+        [bool]$EnterpriseMode,
+        [Parameter(Mandatory = $false)]
+        [bool]$DisableUpdate
 
         If ($SetAsDefault)
             {
@@ -102,13 +104,16 @@ Function Invoke-AdditionalInstall
 
         If ($EnterpriseMode)
             {
-                Write-log "Removing desktop Icon"
-                Remove-Item "C:\Users\Public\Desktop\Acrobat Reader DC.lnk" -Force -ErrorAction SilentlyContinue|Out-Null
+                If (test-path "C:\Users\Public\Desktop\Acrobat Reader DC.lnk")
+                    {
+                        Write-log "Removing desktop Icon"
+                        Remove-Item "C:\Users\Public\Desktop\Acrobat Reader DC.lnk" -Force -ErrorAction SilentlyContinue|Out-Null
+                    }
 
                 $Script_DisableFirstTour = {
-                    if((Test-Path -LiteralPath "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral") -ne $true) {New-Item "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral" -force -ea SilentlyContinue }
-                    New-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral' -Name 'bHonorOSTheme' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue
-                }
+                        if((Test-Path -LiteralPath "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral") -ne $true) {New-Item "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral" -force -ea SilentlyContinue }
+                        New-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral' -Name 'bHonorOSTheme' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue
+                    }
 
                 Write-log "Disabling first tour welcome Popup"
                 Invoke-AsCurrentUser -scriptblock $Script_DisableFirstTour
@@ -124,5 +129,17 @@ Function Invoke-AdditionalUninstall
 
 Function Invoke-DisableUpdateCapability
     {
-
+        Write-log "Removing Adobe Scheduled task"
+        Unregister-ScheduledTask -TaskName "Adobe Acrobat Update Task" -Confirm:$false -ErrorAction SilentlyContinue
+        
+        If (get-service "AdobeARMService")
+            {
+                Write-log "Removing Adobe service"
+                sc.exe delete "AdobeARMService"
+            }
+        
+        
+        Write-log "Hiding Search for update in menu"
+        if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue }
+        New-ItemProperty -LiteralPath '"HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bUpdater' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
     }

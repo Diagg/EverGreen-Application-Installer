@@ -2,14 +2,15 @@
 
 Function Get-AppInfo
     {
-
         param (
             [Parameter(Mandatory = $false)]
             [string]$Architecture,
             [Parameter(Mandatory = $false)]
             [string]$Language,
             [Parameter(Mandatory = $false)]
-            [bool]$DisableUpdate
+            [bool]$DisableUpdate,
+            [Parameter(Mandatory = $false)]
+            [bool]$EnterpriseMode
         )
          
         [PSCustomObject]@{
@@ -83,9 +84,11 @@ Function Get-AppUpdateStatus
 Function Invoke-AdditionalInstall
     {
         [Parameter(Mandatory = $false)]
-        [string]$SetAsDefault,
+        [bool]$SetAsDefault,
         [Parameter(Mandatory = $false)]
-        [string]$EnterpriseMode
+        [bool]$EnterpriseMode,
+        [Parameter(Mandatory = $false)]
+        [bool]$DisableUpdate
 
         If ($SetAsDefault)
             {

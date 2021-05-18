@@ -961,7 +961,7 @@ Function Invoke-AsCurrentUser
                     {
                         # Use the same PowerShell executable as the one that invoked the function, Unless -UseWindowsPowerShell is defined
            
-                        if (!$UseWindowsPowerShell) 
+                        if (!$UseWindowsPowerShell -and  $Host.Name -notlike "*ISE*") 
                             { $pwshPath = (Get-Process -Id $pid).Path } 
                         else 
                             { 
@@ -1521,7 +1521,7 @@ Try
         ##############################
         #### Gather Informations
         ##############################
-        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent
+        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent
         Get-AppInstallStatus
 
         If ($Script:AppInfo.AppIsInstalled)
