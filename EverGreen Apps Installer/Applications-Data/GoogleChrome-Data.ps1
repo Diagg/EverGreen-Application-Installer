@@ -82,6 +82,21 @@ Function Get-AppUpdateStatus
 
 Function Invoke-AdditionalInstall
     {
+        [Parameter(Mandatory = $false)]
+        [string]$SetAsDefault,
+        [Parameter(Mandatory = $false)]
+        [string]$EnterpriseMode
+
+        If ($SetAsDefault)
+            {
+                Set-DefaultFileAssociation -AppToDefault "Google Chrome" -ProtocolExt "http"
+                Set-DefaultFileAssociation -AppToDefault "Google Chrome" -ProtocolExt "https"
+            }
+
+        If ($EnterpriseMode)
+            {
+
+            } 
 
     }
 

@@ -89,7 +89,20 @@ Function Get-AppUpdateStatus
 
 Function Invoke-AdditionalInstall
     {
+        [Parameter(Mandatory = $false)]
+        [string]$SetAsDefault,
+        [Parameter(Mandatory = $false)]
+        [string]$EnterpriseMode
 
+        If ($SetAsDefault)
+            {
+                Set-DefaultFileAssociation -AppToDefault "AcroExch.Document.DC" -ProtocolExt ".pdf"
+            }
+
+        If ($EnterpriseMode)
+            {
+                
+            } 
     }
 
 
