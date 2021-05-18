@@ -96,12 +96,22 @@ Function Invoke-AdditionalInstall
 
         If ($SetAsDefault)
             {
+                Write-log "Setting File Association"
                 Set-DefaultFileAssociation -AppToDefault "AcroExch.Document.DC" -ProtocolExt ".pdf"
             }
 
         If ($EnterpriseMode)
             {
-                
+                Write-log "Removing desktop Icon"
+                Remove-Item "C:\Users\Public\Desktop\Acrobat Reader DC.lnk" -Force -ErrorAction SilentlyContinue|Out-Null
+
+                $Script_DisableFirstTour = {
+                    if((Test-Path -LiteralPath "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral") -ne $true) {New-Item "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral" -force -ea SilentlyContinue }
+                    New-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral' -Name 'bHonorOSTheme' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue
+                }
+
+                Write-log "Disabling first tour welcome Popup"
+                Invoke-AsCurrentUser -scriptblock $Script_DisableFirstTour
             } 
     }
 

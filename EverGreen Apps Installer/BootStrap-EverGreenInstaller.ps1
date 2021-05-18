@@ -974,6 +974,7 @@ Function Invoke-AsCurrentUser
                         if ($NoWait) { $ProcWaitTime = 1 } else { $ProcWaitTime = -1 }
                         if ($NonElevatedSession) { $RunAsAdmin = $false } else { $RunAsAdmin = $true }
                         
+                        Write-Log "about to run `"$pwshPath`" $pwshcommand"
                         [RunAsUser.ProcessExtensions]::StartProcessAsCurrentUser($pwshPath, "`"$pwshPath`" $pwshcommand",(Split-Path $pwshPath -Parent), $Visible, $ProcWaitTime, $RunAsAdmin)|Out-Null
                         
                         if ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force }
