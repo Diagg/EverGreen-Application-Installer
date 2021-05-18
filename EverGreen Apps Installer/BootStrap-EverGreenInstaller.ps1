@@ -1798,6 +1798,7 @@ Try
                 Else
                     {
                         ##== Uninstall
+                        Write-log "About to run $($Script:AppInfo.AppUninstallCMD) $($Script:AppInfo.AppUninstallParameters)"
                         $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
                         If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
                             {Write-log "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
