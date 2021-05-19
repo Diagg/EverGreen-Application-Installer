@@ -868,11 +868,6 @@ Function Invoke-AsCurrentUser
         # Load the custom type
         if (!("RunAsUser.ProcessExtensions" -as [type])) {Add-Type -TypeDefinition $source -Language CSharp}
 
-       
-		# Create Log Folder path if not present        
-        $oFolderPath = Split-Path $ScriptBlockLog
-		If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
-            
 
         # Enhance Scriptblock
         $Script_LogPath = "`$Script:LogPath = ""$ScriptBlockLog"" `n"
@@ -909,7 +904,7 @@ Function Invoke-AsCurrentUser
                         "file=`"`">"
 
                     # Write the line to the log file
-                    Add-Content -Path $Path -Value $Content -Encoding UTF8 -ErrorAction SilentlyContinue
+                    $Content| Out-File -Path $Path -Append -Encoding UTF8 -ErrorAction SilentlyContinue
                 }
 
 

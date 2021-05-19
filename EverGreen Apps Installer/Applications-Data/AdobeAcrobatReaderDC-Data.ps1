@@ -132,7 +132,7 @@ Function Invoke-DisableUpdateCapability
         Write-log "Removing Adobe Scheduled task"
         Unregister-ScheduledTask -TaskName "Adobe Acrobat Update Task" -Confirm:$false -ErrorAction SilentlyContinue
         
-        If (get-service "AdobeARMService")
+        If (Get-service "AdobeARMService" -ErrorAction SilentlyContinue)
             {
                 Write-log "Removing Adobe service"
                 sc.exe delete "AdobeARMService"
