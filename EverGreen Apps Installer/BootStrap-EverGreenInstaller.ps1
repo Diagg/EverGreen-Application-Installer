@@ -84,8 +84,8 @@ https://github.com/DanysysTeam/PS-SFTA
 
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 16/05/2021
-Version: 0.31
+Release date: 26/05/2021
+Version: 0.32
 #>
 
 #Requires -Version 5
@@ -1398,27 +1398,28 @@ Try
 
         If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
             {
-                # Get user when in Windows Sandbox
-                If ((Get-CimInstance -Class Win32_UserAccount -Filter "LocalAccount=True AND Disabled=False AND Status='OK'").Name -eq 'WDAGUtilityAccount')
-                    {$Script:TsEnv.CurrentLoggedOnUser = "$($env:COMPUTERNAME)\WDAGUtilityAccount"}
-                # Get Azure AD User
-                Else
+                $CurrentUser = Get-Itemproperty "Registry::\HKEY_USERS\*\Volatile Environment"|Where-Object {$_.USERDOMAIN -match 'AzureAD' -or $_.USERNAME -match 'WDAGUtilityAccount'}
+                If (![String]::IsNullOrWhiteSpace($CurrentUser))
                     {
-                        If([string]::IsNullOrWhiteSpace($(Get-PSDrive -Name HKU -ErrorAction SilentlyContinue))){New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS | out-null}
-                        $UserReg = Get-Itemproperty "HKU:\*\Volatile Environment"
-                        $CurrentLoggedOnUser = "$($UserReg.USERDOMAIN)\$($UserReg.USERNAME)"
-                        $CurrentLoggedOnUserSID = split-path $UserReg.PSParentPath -leaf
-                        If(Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $CurrentLoggedOnUserSID})
+                        $CurrentLoggedOnUser = "$($CurrentUser.USERDOMAIN)\$($CurrentUser.USERNAME)"
+                        $CurrentLoggedOnUserSID = split-path $CurrentUser.PSParentPath -leaf
+                        If($CurrentUser.USERDOMAIN -match 'AzureAD')
                             {
-                                $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
-                                $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value $CurrentLoggedOnUserSID
-                                $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUserUPN' -Value $(Get-ItemProperty -Path $((Get-ChildItem HKLM:\SOFTWARE\Microsoft\IdentityStore\LogonCache -Recurse -Depth 2 | Where-Object { $_.Name -match $CurrentLoggedOnUserSID}).pspath) | Select-Object -ExpandProperty IdentityName)
+                                $UPNKeys = $(reg query hklm\SOFTWARE\Microsoft\IdentityStore\LogonCache /reg:64).Split([Environment]::NewLine)| where{$_ -ne ""}
+                                ForEach ($item in $UPNKeys)
+                                    {
+                                        $UPN = reg @('query',"$item\Sid2Name\$CurrentLoggedOnUserSID",'/v','IdentityName','/reg:64')
+                                        If ($LASTEXITCODE -eq 0){$CurrentLoggedOnUserUPN = ($UPN[2] -split ' {2,}')[3] ; Break}
+                                    }
                             }
                     }
             }
 
-        If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser)){Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
+        $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value $CurrentLoggedOnUserSID
+        If(![String]::IsNullOrWhiteSpace($CurrentLoggedOnUserUPN)){$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUserUPN' -Value $CurrentLoggedOnUserUPN}
 
+        If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser)){Write-log "[ERROR] Unable to detect current user, Aborting...." ; Exit}
 
         $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemHostName' -Value ([System.Environment]::MachineName)
         $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'SystemIPAddress' -Value (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress

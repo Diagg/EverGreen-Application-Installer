@@ -1,4 +1,4 @@
-# Version 0.20
+# Version 0.1
 
 Function Get-AppInfo
     {
@@ -110,13 +110,9 @@ Function Invoke-AdditionalInstall
                         Remove-Item "C:\Users\Public\Desktop\Acrobat Reader DC.lnk" -Force -ErrorAction SilentlyContinue|Out-Null
                     }
 
-                $Script_DisableFirstTour = {
-                        if((Test-Path -LiteralPath "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral") -ne $true) {New-Item "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral" -force -ea SilentlyContinue }
-                        New-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\AVGeneral' -Name 'bHonorOSTheme' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue
-                    }
-
                 Write-log "Disabling first tour welcome Popup"
-                Invoke-AsCurrentUser -scriptblock $Script_DisableFirstTour
+                if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen" -force -ea SilentlyContinue }
+                New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen' -Name 'bShowWelcomeScreen' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
             } 
     }
 
