@@ -904,7 +904,7 @@ function Write-log
             "file=`"`">"
 
         # Write the line to the log file
-        $Content| Out-File -Path $Path -Append -Encoding UTF8 -ErrorAction SilentlyContinue
+        $Content| Out-File $Path -Append -Encoding UTF8 -ErrorAction SilentlyContinue
     }
 
 
@@ -937,7 +937,7 @@ function Write-Warninglog
         if ($CacheToDisk) 
             {
                 $ScriptGuid = new-guid
-                $ScriptBlock|Out-File -FilePath "$($ENV:TEMP)\$($ScriptGuid).ps1" -Encoding UTF8 -width 160
+                $ScriptBlock|Out-File -FilePath "$($ENV:TEMP)\$($ScriptGuid).ps1" -Encoding UTF8 -width 320
                 Write-log "Script Block converted to file $($ENV:TEMP)\$($ScriptGuid).ps1"
                 $pwshcommand = "-ExecutionPolicy Bypass -Window Normal -file `"$($ENV:TEMP)\$($ScriptGuid).ps1`""
             }
