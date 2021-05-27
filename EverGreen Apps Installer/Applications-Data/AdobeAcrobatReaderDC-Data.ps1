@@ -113,6 +113,16 @@ Function Invoke-AdditionalInstall
                 Write-log "Disabling first tour welcome Popup"
                 if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen" -force -ea SilentlyContinue }
                 New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen' -Name 'bShowWelcomeScreen' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
+
+                $ScriptBlock_firstTour = {
+                        $Reg = "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\FTEDialog"
+                        if((Test-Path -LiteralPath $Reg) -ne $true) {New-Item $Reg -force -ea SilentlyContinue }
+                        New-ItemProperty -LiteralPath $Reg -Name 'bWelcomeCard_RdrInstall' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue
+                        New-ItemProperty -LiteralPath $Reg -Name 'iLastCardShown' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
+                    }
+
+                Invoke-AsCurrentUser -ScriptBlock $ScriptBlock_firstTour
+
             } 
     }
 
