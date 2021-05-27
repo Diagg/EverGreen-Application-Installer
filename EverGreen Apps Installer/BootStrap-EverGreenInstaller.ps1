@@ -874,54 +874,54 @@ Function Invoke-AsCurrentUser
 
         $Script_Init = {
 
-            function Write-log 
-                {
-                    Param(
-                          [parameter()]
-                          [String]$Path=$Script:LogPath,
+function Write-log 
+    {
+        Param(
+                [parameter()]
+                [String]$Path=$Script:LogPath,
 
-                          [parameter(Position=0)]
-                          [String]$Message,
+                [parameter(Position=0)]
+                [String]$Message,
 
-                          [parameter()]
-                          [String]$Component="Invoke-AsCurrentUser",
+                [parameter()]
+                [String]$Component="Invoke-AsCurrentUser",
 
-		                  #Severity  Type(1 - Information, 2- Warning, 3 - Error)
-		                  [parameter(Mandatory=$False)]
-		                  [ValidateRange(1,3)]
-		                  [Single]$Type = 1
-                    )
-
-
-                    # Create a log entry
-                    $Content = "<![LOG[$Message]LOG]!>" +`
-                        "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
-                        "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
-                        "component=`"$Component`" " +`
-                        "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
-                        "type=`"$Type`" " +`
-                        "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
-                        "file=`"`">"
-
-                    # Write the line to the log file
-                    $Content| Out-File -Path $Path -Append -Encoding UTF8 -ErrorAction SilentlyContinue
-                }
+		        #Severity  Type(1 - Information, 2- Warning, 3 - Error)
+		        [parameter(Mandatory=$False)]
+		        [ValidateRange(1,3)]
+		        [Single]$Type = 1
+        )
 
 
-            function Write-Errorlog 
-                {
-                    Param([parameter(Position=0)][String]$Message)
-                    Write-log -Message $Message -type 3
-                }
+        # Create a log entry
+        $Content = "<![LOG[$Message]LOG]!>" +`
+            "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
+            "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
+            "component=`"$Component`" " +`
+            "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
+            "type=`"$Type`" " +`
+            "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
+            "file=`"`">"
+
+        # Write the line to the log file
+        $Content| Out-File -Path $Path -Append -Encoding UTF8 -ErrorAction SilentlyContinue
+    }
 
 
-            function Write-Warninglog 
-                {
-                    Param([parameter(Position=0)][String]$Message)
-                    Write-log -Message $Message -type 2
-                }
+function Write-Errorlog 
+    {
+        Param([parameter(Position=0)][String]$Message)
+        Write-log -Message $Message -type 3
+    }
 
-        }
+
+function Write-Warninglog 
+    {
+        Param([parameter(Position=0)][String]$Message)
+        Write-log -Message $Message -type 2
+    }
+
+}
 
         $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Init.ToString() + $ScriptBlock.ToString().replace("Write-Host", "Write-log").replace("Write-Warning", "Write-Warninglog").replace("Write-Error", "Write-Errorlog").replace("Write-Verbose", "Write-log"))
         $encodedcommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($ScriptBlock))
@@ -937,7 +937,7 @@ Function Invoke-AsCurrentUser
         if ($CacheToDisk) 
             {
                 $ScriptGuid = new-guid
-                $ScriptBlock|Out-File -FilePath "$($ENV:TEMP)\$($ScriptGuid).ps1" -Encoding default
+                $ScriptBlock|Out-File -FilePath "$($ENV:TEMP)\$($ScriptGuid).ps1" -Encoding UTF8 -width 160
                 Write-log "Script Block converted to file $($ENV:TEMP)\$($ScriptGuid).ps1"
                 $pwshcommand = "-ExecutionPolicy Bypass -Window Normal -file `"$($ENV:TEMP)\$($ScriptGuid).ps1`""
             }
@@ -968,9 +968,23 @@ Function Invoke-AsCurrentUser
                         
                         if ($NoWait) { $ProcWaitTime = 1 } else { $ProcWaitTime = -1 }
                         if ($NonElevatedSession) { $RunAsAdmin = $false } else { $RunAsAdmin = $true }
-                        
+
+                        # Add Current user ACL to Log File
+                        $Acl = Get-Acl $ScriptBlockLog
+                        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($($Script:TsEnv.CurrentLoggedOnUser),"FullControl","Allow")
+                        $acl.SetAccessRule($AccessRule)
+                        $acl | Set-Acl $ScriptBlockLog
+
+                        # Run in user Context
                         Write-Log "about to run `"$pwshPath`" $pwshcommand"
                         [RunAsUser.ProcessExtensions]::StartProcessAsCurrentUser($pwshPath, "`"$pwshPath`" $pwshcommand",(Split-Path $pwshPath -Parent), $Visible, $ProcWaitTime, $RunAsAdmin)|Out-Null
+                        
+                        #Remove ACL
+                        $acl = Get-Acl $ScriptBlockLog
+                        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($($Script:TsEnv.CurrentLoggedOnUser),"FullControl","Allow")
+                        $acl.RemoveAccessRule($AccessRule)
+                        $acl | Set-Acl $ScriptBlockLog
+                        
                         
                         #if ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force }
                     }
