@@ -117,7 +117,7 @@ Function Invoke-AdditionalInstall
                 $ScriptBlock_firstTour = {
                         $Reg = "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\FTEDialog"
                         if((Test-Path -LiteralPath $Reg) -ne $true) {New-Item $Reg -force -ea SilentlyContinue }
-                        New-ItemProperty -LiteralPath $Reg -Name 'bWelcomeCard_RdrInstall' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue
+                        New-ItemProperty -LiteralPath $Reg -Name 'iFTEVersion' -Value 0x0000000a -PropertyType DWord -Force -ea SilentlyContinue
                         New-ItemProperty -LiteralPath $Reg -Name 'iLastCardShown' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
                     }
 

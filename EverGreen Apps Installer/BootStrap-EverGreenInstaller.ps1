@@ -986,7 +986,7 @@ function Write-Warninglog
                         $acl | Set-Acl $ScriptBlockLog
                         
                         
-                        #if ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force }
+                        if ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force }
                     }
                 catch 
                     {
