@@ -990,7 +990,7 @@ function Write-Warninglog
                     }
                 catch 
                     {
-                        Write-Log "Could not execute as currently logged on user: $($_.Exception.Message)" -Exception $_.Exception -Type 3
+                        Write-Log "Could not execute as currently logged on user: $($_.Exception.Message)" -Type 3
                         return
                     }
             }
