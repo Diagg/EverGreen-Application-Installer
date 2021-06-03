@@ -84,8 +84,8 @@ https://github.com/DanysysTeam/PS-SFTA
 
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 27/05/2021
-Version: 0.33
+Release date: 03/06/2021
+Version: 0.34
 #>
 
 #Requires -Version 5
@@ -1456,7 +1456,7 @@ Try
     {
         ##== Initializing Environement
         $Script:TsEnv = New-Object PSObject
-        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -Value (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
+        $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUser' -Value (Get-CimInstance -className Win32_ComputerSystem | Select-Object -expand UserName)
 
         If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
             {
