@@ -1829,13 +1829,13 @@ Try
                 $trigger = New-JobTrigger -Daily -At 12:00
                 $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
 
+                If((Get-LocalUser "service.scheduler").Enabled -eq $true){Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue}
                 $password = ConvertTo-SecureString (New-Guid).Guid -AsPlainText -Force
-                $user = New-LocalUser "service.scheduler" -Password $Password -Description "For scheduling in tasks from system account"
+                $user = New-LocalUser "service.scheduler" -Password $Password -Description "For scheduling in tasks from system account" -ErrorAction SilentlyContinue
                 $credentials = New-Object System.Management.Automation.PSCredential($user.name, $password)
 
-
-                $task = Get-ScheduledJob -Name $taskName  -ErrorAction SilentlyContinue
-                if ($null -ne $task){Unregister-ScheduledJob $task -Confirm:$false}
+                $task = Get-ScheduledTask -taskname $taskName -ErrorAction SilentlyContinue
+                if ($null -ne $task){Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false}
 
                 Register-ScheduledJob -Name $taskName  -Trigger $trigger -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval -Credential $credentials|Out-Null
                 $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
