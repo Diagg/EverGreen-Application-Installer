@@ -1,5 +1,5 @@
-#Powershell.exe -executionpolicy bypass -command "$P=$ENV:TEMP+'\'+$(new-guid)+'.ps1';(Invoke-WebRequest 'https://raw.githubusercontent.com/Diagg/EverGreen-Application-Installer/master/EverGreen Apps Installer/BootStrap-EverGreenInstaller.ps1').content|Out-File $P -Encoding UTF8 -width 320;$A = @('-Application','AdobeAcrobatReaderDC','-Language','French','-Architecture','x86','-SetAsDefault');Iex ""$P $A"""
-#Powershell.exe -executionpolicy bypass -command "$P=$ENV:TEMP+'\'+$(new-guid)+'.ps1';(Invoke-WebRequest 'https://raw.githubusercontent.com/Diagg/EverGreen-Application-Installer/master/EverGreen Apps Installer/BootStrap-EverGreenInstaller.ps1').content|Out-File $P -Encoding UTF8 -width 320;$A = @('-Application', 'AdobeAcrobatReaderDC', '-Uninstall');Iex ""$P $A"""
+#Powershell.exe -executionpolicy bypass -command "$P=""$ENV:TEMP\$(new-guid).ps1"";(Invoke-WebRequest 'https://raw.githubusercontent.com/Diagg/EverGreen-Application-Installer/master/EverGreen Apps Installer/BootStrap-EverGreenInstaller.ps1').content|Out-File $P -Encoding UTF8 -width 320;Iex ""$P -Application AdobeAcrobatReaderDC -Language French -Architecture x86 -SetAsDefault"""
+#Powershell.exe -executionpolicy bypass -command "$P=""$ENV:TEMP\$(new-guid).ps1"";(Invoke-WebRequest 'https://raw.githubusercontent.com/Diagg/EverGreen-Application-Installer/master/EverGreen Apps Installer/BootStrap-EverGreenInstaller.ps1').content|Out-File $P -Encoding UTF8 -width 320;Iex ""$P -Application AdobeAcrobatReaderDC -Uninstall"""
 
 $install ={
 # Install Adobe Reader DC

@@ -130,7 +130,7 @@ param(
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
         [Parameter(ParameterSetName = 'Predownload')]        
-        [string]$Log,
+        [string]$Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-Intaller.log"),
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
@@ -173,13 +173,7 @@ $ErrorActionPreference = "stop"
 $Script:CurrentScriptName = $MyInvocation.MyCommand.Name
 $Script:CurrentScriptFullName = $MyInvocation.MyCommand.Path
 $Script:CurrentScriptPath = split-path $MyInvocation.MyCommand.Path
-#Set-PSBreakpoint -Line 978 -Script $Script:CurrentScriptFullName
-
-#==Log Init
-If (-not [string]::IsNullOrWhiteSpace($Log))
-    {$Script:Log = $Log}
-Else    
-    {$Script:Log = $("$env:Windir\Logs\EvergreenApplication\EverGreen-" + $Application + "_"  + "Intaller.log")}
+$Script:Log = $Log
 
 
 ##== Functions
