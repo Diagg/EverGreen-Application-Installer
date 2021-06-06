@@ -82,10 +82,10 @@ https://z-nerd.com/blog/2020/03/31-intune-win32-apps-powershell-script-installer
 Set-DefaultFileAssociation function based on work by Danyfirex & Dany3j
 https://github.com/DanysysTeam/PS-SFTA
 
-Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
+Write-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
 Release date: 06/06/2021
-Version: 0.35
+Version: 0.36
 #>
 
 #Requires -Version 5
@@ -501,9 +501,7 @@ Function Invoke-AsCurrentUser
             [ValidateSet("x86","x64","X86","X64")]
             [String]$Architecture = "x64",
             [Parameter(Mandatory = $false)]
-            [switch]$UseWindowsPowerShell,
-            [Parameter(Mandatory = $false)]
-            [switch]$NonElevatedSession,
+            [switch]$UseWindowsPowerShell = $true,
             [Parameter(Mandatory = $false)]
             [switch]$Visible,
             [Parameter(Mandatory = $false)]
@@ -867,6 +865,8 @@ Function Invoke-AsCurrentUser
         # Load the custom type
         if (!("RunAsUser.ProcessExtensions" -as [type])) {Add-Type -TypeDefinition $source -Language CSharp}
 
+        Write-Log "Preparing Invokation as Current user"
+        Write-Log "Invokation log is $ScriptBlockLog"
 
         # Enhance Scriptblock
         $Script_LogPath = "`$Script:LogPath = ""$ScriptBlockLog"" `n"
@@ -951,49 +951,51 @@ function Write-Warninglog
             }
         else 
             {
-                try 
-                    {
-                        # Use the same PowerShell executable as the one that invoked the function, Unless -UseWindowsPowerShell is defined
-           
-                        if (!$UseWindowsPowerShell -and  $Host.Name -notlike "*ISE*") 
-                            { $pwshPath = (Get-Process -Id $pid).Path } 
-                        else 
-                            { 
-                                If ($Architecture.ToUpper() = "X64")
-                                    {$pwshPath = "$($ENV:windir)\system32\WindowsPowerShell\v1.0\powershell.exe"}
-                                Else
-                                    {$pwshPath = "$($ENV:windir)\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"}     
-                            }
-                        
-                        if ($NoWait) { $ProcWaitTime = 1 } else { $ProcWaitTime = -1 }
-                        if ($NonElevatedSession) { $RunAsAdmin = $false } else { $RunAsAdmin = $true }
 
-                        # Add Current user ACL to Log File
+                # Use the same PowerShell executable as the one that invoked the function, Unless -UseWindowsPowerShell is defined
+           
+                If (!$UseWindowsPowerShell -and  $Host.Name -notlike "*ISE*") 
+                    { $pwshPath = (Get-Process -Id $pid).Path } 
+                Else 
+                    { $pwshPath = "$PSHome\powershell.exe"}
+                        
+                If ($NoWait) { $ProcWaitTime = 1 } else { $ProcWaitTime = -1 }
+                If ((New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator) -eq $true -and $([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) -eq $false) { $RunAsAdmin = $true } else { $RunAsAdmin = $false }
+
+
+                # Add Current user ACL to Log File
+                If ((get-acl $ScriptBlockLog).AccessToString -notlike "*$($Script:TsEnv.CurrentLoggedOnUser) Allow  FullControl*")
+                    {
                         $Acl = Get-Acl $ScriptBlockLog
                         $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($($Script:TsEnv.CurrentLoggedOnUser),"FullControl","Allow")
                         $acl.SetAccessRule($AccessRule)
-                        $acl | Set-Acl $ScriptBlockLog
-
-                        # Run in user Context
-                        Write-Log "about to run `"$pwshPath`" $pwshcommand"
-                        [RunAsUser.ProcessExtensions]::StartProcessAsCurrentUser($pwshPath, "`"$pwshPath`" $pwshcommand",(Split-Path $pwshPath -Parent), $Visible, $ProcWaitTime, $RunAsAdmin)|Out-Null
-                        
-                        #Remove ACL
-                        $acl = Get-Acl $ScriptBlockLog
-                        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($($Script:TsEnv.CurrentLoggedOnUser),"FullControl","Allow")
-                        $acl.RemoveAccessRule($AccessRule)
-                        $acl | Set-Acl $ScriptBlockLog
-                        
-                        
-                        if ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force }
+                        $acl | Set-Acl $ScriptBlockLog -ErrorAction SilentlyContinue
                     }
-                catch 
+
+                Try 
                     {
-                        Write-Log "Could not execute as currently logged on user: $($_.Exception.Message)" -Type 3
-                        return
+                        # Run in user Context
+                        Write-Log "about to run `"$pwshPath`" $pwshcommand -IsVisible $Visible -Wait $ProcWaitTime -RunAsAdmin $RunAsAdmin"
+                        [RunAsUser.ProcessExtensions]::StartProcessAsCurrentUser($pwshPath, "`"$pwshPath`" $pwshcommand",(Split-Path $pwshPath -Parent), $Visible, $ProcWaitTime, $RunAsAdmin)|Out-Null
+                    }
+                Catch 
+                    {Write-Log "Could not execute as currently logged on user: $($_.Exception.Message)" -Type 3}
+                Finally
+                    {
+                        If ((get-acl $ScriptBlockLog).AccessToString -like "*$($Script:TsEnv.CurrentLoggedOnUser) Allow  FullControl*")
+                            {
+                                #Remove ACL
+                                $acl = Get-Acl $ScriptBlockLog
+                                $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($($Script:TsEnv.CurrentLoggedOnUser),"FullControl","Allow")
+                                $acl.RemoveAccessRule($AccessRule)
+                                $acl | Set-Acl $ScriptBlockLog -ErrorAction SilentlyContinue
+                            }
+                        
+                        If ($CacheToDisk) { $null = remove-item "$($ENV:TEMP)\$($ScriptGuid).ps1" -Force -ErrorAction SilentlyContinue }
                     }
             }
     }
+
 
 Function Set-DefaultFileAssociation
     {
@@ -1828,7 +1830,7 @@ Try
                 $trigger = New-JobTrigger -Daily -At 12:00
                 $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
 
-                If((Get-LocalUser "service.scheduler").Enabled -eq $true){Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue}
+                If((Get-LocalUser "service.scheduler" -ErrorAction SilentlyContinue).Enabled -eq $true){Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue}
                 $password = ConvertTo-SecureString (New-Guid).Guid -AsPlainText -Force
                 $user = New-LocalUser "service.scheduler" -Password $Password -Description "For scheduling in tasks from system account" -ErrorAction SilentlyContinue
                 $credentials = New-Object System.Management.Automation.PSCredential($user.name, $password)

@@ -1,5 +1,5 @@
 ﻿Start-Transcript -Path "C:\Windows\Logs\Evergreen-DetectionRules.log" -Append -Force -ErrorAction SilentlyContinue
-$Application = "GoogleChrome"
+$Application = "AdobeAcrobatReaderDC"
 Write-host "###########################################################"
 Write-host "Executing detection rules for application $Application"
 Write-host "###########################################################"
