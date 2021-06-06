@@ -84,8 +84,8 @@ https://github.com/DanysysTeam/PS-SFTA
 
 Wirte-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 03/06/2021
-Version: 0.34
+Release date: 06/06/2021
+Version: 0.35
 #>
 
 #Requires -Version 5
@@ -106,7 +106,8 @@ param(
         "MicrosoftWvdInfraAgent","MicrosoftWvdRemoteDesktop","MicrosoftWvdRtcService","MozillaFirefox","MozillaThunderbird","mRemoteNG","NETworkManager","NotepadPlusPlus","OpenJDK","OpenShellMenu",
         "OracleJava8","OracleVirtualBox","PaintDotNet","PDFForgePDFCreator","PeaZipPeaZip","ProjectLibre","RCoreTeamRforWindows","RingCentral","ScooterBeyondCompare","ShareX","Slack","StefansToolsgregpWin",
         "SumatraPDFReader","TeamViewer","TelegramDesktop","TelerikFiddlerEverywhere","Terminals","VastLimitsUberAgent","VercelHyper","VideoLanVlcPlayer","VMwareTools","Win32OpenSSH",
-        "WinMerge","WinSCP","WixToolset","Zoom")]        
+        "WinMerge","WinSCP","WixToolset","Zoom")]
+        [Alias('app')]        
         [string]$Application,
 
         [Parameter(ParameterSetName = 'Online')]
@@ -125,6 +126,7 @@ param(
         [Parameter(ParameterSetName = 'Offline')]
         [Parameter(ParameterSetName = 'Predownload')]
         [ValidateSet("x86", "x64")]
+        [Alias('arch')]
         [string]$Architecture = "X64",
 
         [Parameter(ParameterSetName = 'Online')]
@@ -134,15 +136,18 @@ param(
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
-        [Parameter(ParameterSetName = 'Predownload')]        
+        [Parameter(ParameterSetName = 'Predownload')]
+        [Alias('lng')]        
         [string]$Language = $Null,
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
+        [Alias('default')]
         [switch]$SetAsDefault,
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
+        [Alias('ent')]
         [switch]$EnterpriseMode,
 
         [Parameter(ParameterSetName = 'Online')]
@@ -1831,8 +1836,8 @@ Try
                 $task = Get-ScheduledTask -taskname $taskName -ErrorAction SilentlyContinue
                 if ($null -ne $task){Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false}
 
-                Register-ScheduledJob -Name $taskName  -Trigger $trigger -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval -Credential $credentials|Out-Null
-                $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+                Register-ScheduledJob -Name $taskName  -Trigger $trigger -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval -Credential $credentials -ErrorAction SilentlyContinue|Out-Null
+                $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highes
                 Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
                 Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue
                 write-log "Update Evaluation Scheduled task installed successfully under name $Taskname!"
