@@ -84,8 +84,8 @@ https://github.com/DanysysTeam/PS-SFTA
 
 Write-log based on work by someone i could not remember (Feel free to reatch me if you recognize your code)
 
-Release date: 06/06/2021
-Version: 0.36
+Release date: 08/06/2021
+Version: 0.37
 #>
 
 #Requires -Version 5
@@ -164,10 +164,19 @@ param(
         [string]$GithubToken,
 
         [Parameter(ParameterSetName = 'Online')]
+        [Parameter(ParameterSetName = 'Offline')]
+        [Parameter(ParameterSetName = 'Predownload')]
         [string]$PreScriptURI,
 
         [Parameter(ParameterSetName = 'Online')]
-        [string]$PostScriptURI
+        [Parameter(ParameterSetName = 'Offline')]
+        [Parameter(ParameterSetName = 'Predownload')]
+        [string]$PostScriptURI,
+
+        [Parameter(ParameterSetName = 'Online')]
+        [Parameter(ParameterSetName = 'Offline')]
+        [Parameter(ParameterSetName = 'Predownload')]
+        [string]$UpdatePolicyURI
      )
 
 ##== Debug
@@ -1595,9 +1604,10 @@ Try
         ##############################
         #### Pre-Script
         ##############################
-        If ($PreScriptURI -and $GithubToken)
+        If ($PreScriptURI)
             {
                 Write-log "Invoking Prescript"
+                If ($GithubToken){$PreScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken} Else {$PreScript = Get-GistContent -PreScriptURI $PreScriptURI}
                 $PreScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
                 Try {Invoke-Command $PreScript}
                 Catch {Write-log "[Error] Prescript Failed to execute" -Type 3}
@@ -1738,6 +1748,7 @@ Try
                 New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
                 New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
                 New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){New-ItemProperty -Path "$RegTag\$Application" -Name "Language" -Value $($Script:AppInfo.AppInstallLanguage) -Force -ErrorAction SilentlyContinue|Out-Null}
 
                 ##== Create Scheduled task
                 Write-log "Creating Update Evaluation Scheduled Task !"
@@ -1874,10 +1885,10 @@ Try
         ##############################
         #### Post-Script
         ##############################
-        If ($PostScriptURI -and $GithubToken)
+        If ($PostScriptURI)
             {
                 Write-log "Invoking Postscript"
-                $PostScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
+                If ($GithubToken){$PostScript = Get-GistContent -PreScriptURI $PostScriptURI -GithubToken $GithubToken} Else {$PostScript = Get-GistContent -PreScriptURI $PostScriptURI}
                 Try {Invoke-Command $PostScript}
                 Catch {Write-log "[Error] Postscript Failed to execute" -Type 3}
             }

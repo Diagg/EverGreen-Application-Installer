@@ -1,0 +1,12 @@
+{
+  "GoogleChrome": {
+    "Update": true,
+    "DaysToPostPone": null,
+    "HoursToPostPone":null
+  } ,
+    "AdobeAcrobatReaderDC": {
+    "Update": true,
+    "DaysToPostPone": null,
+    "HoursToPostPone":null
+  }
+}
