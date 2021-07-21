@@ -344,8 +344,7 @@ Function Get-GithubContent
                                             [Parameter( Position = 0, Mandatory = $True )]
                                             [String]$Path
                                         )
-
-
+                                        
 
                                         $myGithubRepos = Invoke-RestMethod -method Get -Uri $path -Headers $Headers -WebSession $GITHUB
 
@@ -1607,8 +1606,7 @@ Try
         If ($PreScriptURI)
             {
                 Write-log "Invoking Prescript"
-                If ($GithubToken){$PreScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken} Else {$PreScript = Get-GistContent -PreScriptURI $PreScriptURI}
-                $PreScript = Get-GistContent -PreScriptURI $PreScriptURI -GithubToken $GithubToken
+                If ($GithubToken){$PreScript = Get-GithubContent -URI $PreScriptURI -GithubToken $GithubToken} Else {$PreScript = Get-GithubContent -URI $PreScriptURI}
                 Try {Invoke-Command $PreScript}
                 Catch {Write-log "[Error] Prescript Failed to execute" -Type 3}
             }
@@ -1744,7 +1742,7 @@ Try
                 $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
                 If (-not(Test-path $RegTag)){New-item -Path $RegTag -Force|Out-Null}
                 If (-not(Test-path "$RegTag\$Application")){New-item -Path "$RegTag\$Application" -Force|Out-Null}
-                New-ItemProperty -Path "$RegTag\$Application" -Name "Install Date" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
+                New-ItemProperty -Path "$RegTag\$Application" -Name "InstallDate" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
                 New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
                 New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
                 New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
@@ -1888,7 +1886,7 @@ Try
         If ($PostScriptURI)
             {
                 Write-log "Invoking Postscript"
-                If ($GithubToken){$PostScript = Get-GistContent -PreScriptURI $PostScriptURI -GithubToken $GithubToken} Else {$PostScript = Get-GistContent -PreScriptURI $PostScriptURI}
+                If ($GithubToken){$PostScript = Get-GithubContent -URI $PostScriptURI -GithubToken $GithubToken} Else {$PostScript = Get-GithubContent -URI $PostScriptURI}
                 Try {Invoke-Command $PostScript}
                 Catch {Write-log "[Error] Postscript Failed to execute" -Type 3}
             }
