@@ -1469,14 +1469,15 @@ Try
 
         If ([String]::IsNullOrWhiteSpace($Script:TsEnv.CurrentLoggedOnUser))
             {
-                $CurrentUser = Get-Itemproperty "Registry::\HKEY_USERS\*\Volatile Environment"|Where-Object {$_.USERDOMAIN -match 'AzureAD' -or $_.USERNAME -match 'WDAGUtilityAccount'}
+                # Connected user is an Azure AD or SandBox User
+                $CurrentUser = Get-Itemproperty "Registry::\HKEY_USERS\*\Volatile Environment" -ErrorAction SilentlyContinue|Where-Object {$_.USERDOMAIN -match 'AzureAD' -or $_.USERNAME -match 'WDAGUtilityAccount'}
                 If (![String]::IsNullOrWhiteSpace($CurrentUser))
                     {
                         $CurrentLoggedOnUser = "$($CurrentUser.USERDOMAIN)\$($CurrentUser.USERNAME)"
                         $CurrentLoggedOnUserSID = split-path $CurrentUser.PSParentPath -leaf
                         If($CurrentUser.USERDOMAIN -match 'AzureAD')
                             {
-                                $UPNKeys = $(reg query hklm\SOFTWARE\Microsoft\IdentityStore\LogonCache /reg:64).Split([Environment]::NewLine)| where{$_ -ne ""}
+                                $UPNKeys = $(reg query hklm\SOFTWARE\Microsoft\IdentityStore\LogonCache /reg:64).Split([Environment]::NewLine)| Where-Object{$_ -ne ""}
                                 ForEach ($item in $UPNKeys)
                                     {
                                         $UPN = reg @('query',"$item\Sid2Name\$CurrentLoggedOnUserSID",'/v','IdentityName','/reg:64')
@@ -1484,6 +1485,13 @@ Try
                                     }
                             }
                     }
+                else 
+                    {
+                        # Connected user is a Domain or Workgroup User
+                        $CurrentLoggedOnUser = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty UserName)    
+                        $CurrentUser = Get-Itemproperty "Registry::\HKEY_USERS\*\Volatile Environment" -ErrorAction SilentlyContinue | where-object username -eq $($CurrentLoggedOnUser).split("\")[1]
+                        $CurrentLoggedOnUserSID = split-path $CurrentUser.PSParentPath -leaf
+                    }   
             }
 
         $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
