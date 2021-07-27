@@ -5,11 +5,8 @@
 param(
 
         [string]$GithubRepo = "https://github.com/Diagg/EverGreen-Application-Installer",
-
         [string]$Log = "$env:Windir\Logs\EvergreenApplication\EverGreen-UpdateEvaluation.log",
-
         [string]$GithubToken,
-
         [string]$UpdatePolicyURI = "https://github.com/Diagg/EverGreen-Application-Installer/blob/master/EverGreen%20Apps%20Installer/Defaul-UpdatePolicy.json"
      )
 
@@ -238,61 +235,59 @@ Function Get-GithubContent
         #Load Application Update Policy.
         Write-log "Retrieving Update ploicy from URI $UpdatePolicyURI"
         If ($GithubToken){$JsonUpdatePolicy = Get-GithubContent -URI $UpdatePolicyURI -GithubToken $GithubToken} Else {$JsonUpdatePolicy = Get-GithubContent -URI $UpdatePolicyURI}
-        If ([String]::IsNullOrWhiteSpace($JsonUpdatePolicy)){Write-log "[ERROR] Unable to download Application Update policy, Aborting...." ; Exit}
+        If ([String]::IsNullOrWhiteSpace($JsonUpdatePolicy)){Write-log "[ERROR] Unable to download Application Update policy, Aborting...." -Type 3 ; Exit}
         $ApplicationUpdatePolicy = $JsonUpdatePolicy|ConvertFrom-Json
 
-
-        # Check for updates
+        ##== Check Evergreen installer Applications
         $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
-        If (test-path $RegTag)
+        If (-not(test-path $RegTag)){"No EverGreen Installer application detected on this machine, all operations finished...." ; Exit }
+
+        ##== Check for Updates
+        $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
+        ForEach ($Regitem in $EverGreenApps)
             {
-                $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
-
-                ForEach ($Regitem in $EverGreenApps)
+                $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
+                If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
                     {
-                        $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
-                        If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
+                        Write-log "Application : $Regitem"
+                        If (-not([String]::IsNullOrWhiteSpace($ApplicationUpdatePolicy.$($Regitem))))
                             {
-                                Write-log "Application : $Regitem"
-                                If (-not([String]::IsNullOrWhiteSpace($ApplicationUpdatePolicy.$($Regitem))))
-                                    {
-                                        Write-log "Update Policy : Retrived"
-                                        Write-log "Update unabled : $($ApplicationUpdatePolicy.$($Regitem).Update)"
-                                        Write-log "Postpone Update days : $($ApplicationUpdatePolicy.$($Regitem).DaysToPostPone)"
-                                        Write-log "Postpone Update Hours : $($ApplicationUpdatePolicy.$($Regitem).HoursToPostPone)"
-                                    } 
-                                Else 
-                                    {Write-log "Update Policy : Undefined"}
-                                
-                                $AppInstalledVersion = $AppInfo.Version
-                                $AppInstalledArchitecture = $AppInfo.Architecture
-                                $AppInstalledLanguage = $AppInfo.Language
-                                Write-log "Installed version : $AppInstalledVersion"
-                                Write-log "Installed Architecture : $AppInstalledArchitecture"
-                                If (-not([string]::IsNullOrWhiteSpace($AppInstalledLanguage)))
-                                    {
-                                        Write-log "Installed Language : $AppInstalledLanguage"
-                                        $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object {$_.Architecture -eq $AppInstalledArchitecture -and $_.Language -eq $AppInstalledLanguage}
-                                    }
-                                Else
-                                    {$AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object $_.Architecture -eq $AppInstalledArchitecture}
-
-                                Write-log "Checking for Newer version online..."
-                                Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
-
-                                If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
-                                    {
-                                        Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force -ErrorAction SilentlyContinue|Out-Null
-                                        Write-log "$Regitem application status changed to Obsolete !"
-                                    }
+                                Write-log "Update Policy : Retrived"
+                                Write-log "Update unabled : $($ApplicationUpdatePolicy.$($Regitem).Update)"
+                                Write-log "Postpone Update days : $($ApplicationUpdatePolicy.$($Regitem).DaysToPostPone)"
+                                Write-log "Postpone Update Hours : $($ApplicationUpdatePolicy.$($Regitem).HoursToPostPone)"
+                            } 
+                        Else 
+                            {Write-log "Update Policy : Undefined"}
                         
-                                If (Get-ItemProperty -Path "$RegTag\$Regitem" -Name "LatestUpdateScan")
-                                    {Set-ItemProperty "$RegTag\$Regitem" -name 'LatestUpdateScan' -Value $([DateTime]::Now) -force -ErrorAction SilentlyContinue|Out-Null}
-                                Else
-                                    {New-ItemProperty -Path "$RegTag\$Regitem" -Name "LatestUpdateScan" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null}    
+                        $AppInstalledVersion = $AppInfo.Version
+                        $AppInstalledArchitecture = $AppInfo.Architecture
+                        $AppInstalledLanguage = $AppInfo.Language
+                        Write-log "Installed version : $AppInstalledVersion"
+                        Write-log "Installed Architecture : $AppInstalledArchitecture"
+                        If (-not([string]::IsNullOrWhiteSpace($AppInstalledLanguage)))
+                            {
+                                Write-log "Installed Language : $AppInstalledLanguage"
+                                $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object {$_.Architecture -eq $AppInstalledArchitecture -and $_.Language -eq $AppInstalledLanguage}
                             }
+                        Else
+                            {$AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object $_.Architecture -eq $AppInstalledArchitecture}
+
+                        Write-log "Checking for Newer version online..."
+                        Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
+
+                        If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                            {
+                                Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force -ErrorAction SilentlyContinue|Out-Null
+                                Write-log "$Regitem application status changed to Obsolete !"
+                            }
+                
+                        If (Get-ItemProperty -Path "$RegTag\$Regitem" -Name "LatestUpdateScan")
+                            {Set-ItemProperty "$RegTag\$Regitem" -name 'LatestUpdateScan' -Value $([DateTime]::Now) -force -ErrorAction SilentlyContinue|Out-Null}
+                        Else
+                            {New-ItemProperty -Path "$RegTag\$Regitem" -Name "LatestUpdateScan" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null}    
                     }
-                }
+            }
 
         $FinishTime = [DateTime]::Now
         Write-log "***************************************************************************************************"
