@@ -1485,16 +1485,16 @@ Try
                                     }
                             }
                     }
-                else 
-                    {
-                        # Connected user is a Domain or Workgroup User
-                        $CurrentLoggedOnUser = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty UserName)    
-                        $CurrentUser = Get-Itemproperty "Registry::\HKEY_USERS\*\Volatile Environment" -ErrorAction SilentlyContinue | where-object username -eq $($CurrentLoggedOnUser).split("\")[1]
-                        $CurrentLoggedOnUserSID = split-path $CurrentUser.PSParentPath -leaf
-                    }   
+        
+                $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser    
             }
 
-        $Script:TsEnv.CurrentLoggedOnUser = $CurrentLoggedOnUser
+        If ([String]::IsNullOrWhiteSpace($CurrentLoggedOnUserSID))
+            {
+                $CurrentUser = Get-Itemproperty "Registry::\HKEY_USERS\*\Volatile Environment" -ErrorAction SilentlyContinue | Where-Object UserName -EQ $($Script:TsEnv.CurrentLoggedOnUser).split("\")[1]
+                $CurrentLoggedOnUserSID = split-path $CurrentUser.PSParentPath -leaf
+            }
+
         $Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentUserSID' -Value $CurrentLoggedOnUserSID
         If(![String]::IsNullOrWhiteSpace($CurrentLoggedOnUserUPN)){$Script:TsEnv|Add-Member -MemberType NoteProperty -Name 'CurrentLoggedOnUserUPN' -Value $CurrentLoggedOnUserUPN}
 
@@ -1525,7 +1525,7 @@ Try
         Write-log "***************************************************************************************************"
         Write-log "Release $((Select-String -Pattern "Version:" -Path $Script:CurrentScriptFullName -CaseSensitive).Line[0])"
         Write-log "Started processing time: [$StartupTime]"
-        Write-log "Script Name: $CurrentScriptName"
+        Write-log "Script Name: $CurrentScriptFullName"
         Write-log "Selected Application: $Application"
         If ($Uninstall -ne $true) {Write-log "Selected Application Architecture: $Architecture"}
         Write-log "***************************************************************************************************"
@@ -1543,27 +1543,24 @@ Try
         Write-Log "Execution Context is TrustedInstaller: $($Script:TsEnv.CurrentUserIsTrustedInstaller)" 
 
 
-        If ($Uninstall -eq $true){Write-log "Selected Action: Uninstallation"}
-        else
+        If ($Uninstall -eq $true)
+            {Write-log "Selected Action: Uninstallation"}
+        Elseif (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
             {
-                if (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
-                    {
-                        Write-log "Selected Action: Installation from offline source"
-                        Write-log "Install Option: Offline location $InstallSourcePath"
-                        $OfflineInstall = $true
-                    }    
-                Else
-                    {Write-log "Selected Action: Installation"}
+                Write-log "Selected Action: Installation from offline source"
+                Write-log "Install Option: Offline location $InstallSourcePath"
+                $OfflineInstall = $true
             }
-
-        If ($DisableUpdate -eq $true){Write-log "Install Option: Disabling update feature"}
-
-        if (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
+        ElseIf ($DisableUpdate -eq $true)
+            {Write-log "Install Option: Disabling update feature"}
+        ElseIf (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
             {
                 Write-log "Selected Action: Predownloading without installation"
                 Write-log "Install Option: Download location $PreDownloadPath"
-            }
-
+            }           
+        Else
+            {Write-log "Selected Action: Installation"}
+    
 
         ##== Init        
         If ($Uninstall -eq $true){Initialize-Prereq -NoModuleUpdate}
@@ -1746,120 +1743,125 @@ Try
 
 
                 ##== Tag in registry
-                Write-log "Tagging in the registry !"
-                $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
-                If (-not(Test-path $RegTag)){New-item -Path $RegTag -Force|Out-Null}
-                If (-not(Test-path "$RegTag\$Application")){New-item -Path "$RegTag\$Application" -Force|Out-Null}
-                New-ItemProperty -Path "$RegTag\$Application" -Name "InstallDate" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
-                New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
-                New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
-                New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){New-ItemProperty -Path "$RegTag\$Application" -Name "Language" -Value $($Script:AppInfo.AppInstallLanguage) -Force -ErrorAction SilentlyContinue|Out-Null}
-
-                ##== Create Scheduled task
-                Write-log "Creating Update Evaluation Scheduled Task !"
-                $ScriptBlock_UpdateEval = {
-                    ##== Functions
-                    function Write-log 
-                        {
-                             Param(
-                                  [parameter()]
-                                  [String]$Path="C:\Windows\Logs\EvergreenApplication\Evergreen-ApplicationUpdateEvaluation.log",
-
-                                  [parameter(Position=0)]
-                                  [String]$Message,
-
-                                  [parameter()]
-                                  [String]$Component="ApplicationUpdateEvaluation",
-
-		                          #Severity  Type(1 - Information, 2- Warning, 3 - Error)
-		                          [parameter(Mandatory=$False)]
-		                          [ValidateRange(1,3)]
-		                          [Single]$Type = 1
-                            )
-
-		                    # Create Folder path if not present
-                            $oFolderPath = Split-Path $Path
-		                    If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
-
-                            # Create a log entry
-                            $Content = "<![LOG[$Message]LOG]!>" +`
-                                "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
-                                "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
-                                "component=`"$Component`" " +`
-                                "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
-                                "type=`"$Type`" " +`
-                                "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
-                                "file=`"`">"
-
-                            # Write the line to the log file
-                            $Content|Out-File $Path -Append -ErrorAction SilentlyContinue -Encoding utf8
-                        }
-
-
-                    ##== Main
-                    $StartupTime = [DateTime]::Now
-                    Write-log 
-                    Write-log "***************************************************************************************************"
-                    Write-log "***************************************************************************************************"
-                    Write-log "Started processing time: [$StartupTime]"
-                    Write-log "Script Name: ApplicationUpdateEvaluation"
-                    Write-log "***************************************************************************************************"
-
-                    $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
-                    If (test-path $RegPath)
-                        {
-                            $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
-
-                            ForEach ($Regitem in $EverGreenApps)
+                If ([String]::IsNullOrWhiteSpace($PreDownloadPath))
+                    {
+                        Write-log "Tagging in the registry !"
+                        $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
+                        If (-not(Test-path $RegTag)){New-item -Path $RegTag -Force|Out-Null}
+                        If (-not(Test-path "$RegTag\$Application")){New-item -Path "$RegTag\$Application" -Force|Out-Null}
+                        New-ItemProperty -Path "$RegTag\$Application" -Name "InstallDate" -Value $([DateTime]::Now) -Force -ErrorAction SilentlyContinue|Out-Null
+                        New-ItemProperty -Path "$RegTag\$Application" -Name "Version" -Value $($Script:AppInfo.AppInstalledVersion) -Force -ErrorAction SilentlyContinue|Out-Null
+                        New-ItemProperty -Path "$RegTag\$Application" -Name "Architecture" -Value $($Script:AppInfo.AppArchitecture) -Force -ErrorAction SilentlyContinue|Out-Null
+                        New-ItemProperty -Path "$RegTag\$Application" -Name "Status" -Value "UpToDate" -Force -ErrorAction SilentlyContinue|Out-Null
+                        If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){New-ItemProperty -Path "$RegTag\$Application" -Name "Language" -Value $($Script:AppInfo.AppInstallLanguage) -Force -ErrorAction SilentlyContinue|Out-Null}
+                    
+                        ##== Create Scheduled task
+                        Write-log "Creating Update Evaluation Scheduled Task !"
+                        $ScriptBlock_UpdateEval = {
+                            ##== Functions
+                            function Write-log 
                                 {
-                                    $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
-                                    If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
+                                    Param(
+                                        [parameter()]
+                                        [String]$Path="C:\Windows\Logs\EvergreenApplication\Evergreen-ApplicationUpdateEvaluation.log",
+
+                                        [parameter(Position=0)]
+                                        [String]$Message,
+
+                                        [parameter()]
+                                        [String]$Component="ApplicationUpdateEvaluation",
+
+                                        #Severity  Type(1 - Information, 2- Warning, 3 - Error)
+                                        [parameter(Mandatory=$False)]
+                                        [ValidateRange(1,3)]
+                                        [Single]$Type = 1
+                                    )
+
+                                    # Create Folder path if not present
+                                    $oFolderPath = Split-Path $Path
+                                    If (-not (test-path $oFolderPath)){New-Item -Path $oFolderPath -ItemType Directory -Force|out-null}
+
+                                    # Create a log entry
+                                    $Content = "<![LOG[$Message]LOG]!>" +`
+                                        "<time=`"$(Get-Date -Format "HH:mm:ss.ffffff")`" " +`
+                                        "date=`"$(Get-Date -Format "M-d-yyyy")`" " +`
+                                        "component=`"$Component`" " +`
+                                        "context=`"$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " +`
+                                        "type=`"$Type`" " +`
+                                        "thread=`"$([Threading.Thread]::CurrentThread.ManagedThreadId)`" " +`
+                                        "file=`"`">"
+
+                                    # Write the line to the log file
+                                    $Content|Out-File $Path -Append -ErrorAction SilentlyContinue -Encoding utf8
+                                }
+
+
+                            ##== Main
+                            $StartupTime = [DateTime]::Now
+                            Write-log 
+                            Write-log "***************************************************************************************************"
+                            Write-log "***************************************************************************************************"
+                            Write-log "Started processing time: [$StartupTime]"
+                            Write-log "Script Name: ApplicationUpdateEvaluation"
+                            Write-log "***************************************************************************************************"
+
+                            $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
+                            If (test-path $RegPath)
+                                {
+                                    $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
+
+                                    ForEach ($Regitem in $EverGreenApps)
                                         {
-                                            Write-log "Application : $Regitem"
-                                            $AppInstalledVersion = $AppInfo.DisplayVersion
-                                            $AppInstalledArchitecture = $AppInfo.Architecture
-                                            Write-log "Installed version : $AppInstalledVersion"
-
-                                            Write-log "Checking for Newer version online..."
-                                            $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
-                                            Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
-
-                                            If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                            $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
+                                            If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
                                                 {
-                                                    Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
-                                                    Write-log "$Regitem application status changed to Obsolete !"
+                                                    Write-log "Application : $Regitem"
+                                                    $AppInstalledVersion = $AppInfo.DisplayVersion
+                                                    $AppInstalledArchitecture = $AppInfo.Architecture
+                                                    Write-log "Installed version : $AppInstalledVersion"
+
+                                                    Write-log "Checking for Newer version online..."
+                                                    $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
+                                                    Write-log "Latest verion available online: $($AppEverGreenInfo.Version)"
+
+                                                    If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                                        {
+                                                            Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
+                                                            Write-log "$Regitem application status changed to Obsolete !"
+                                                        }
                                                 }
                                         }
-                                }
-                            }
+                                    }
 
-                    $FinishTime = [DateTime]::Now
-                    Write-log "***************************************************************************************************"
-                    Write-log "Finished processing time: [$FinishTime]"
-                    Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
-                    Write-log "All Operations Finished!! Exit !"
-                    Write-log "***************************************************************************************************"  
-                }
+                            $FinishTime = [DateTime]::Now
+                            Write-log "***************************************************************************************************"
+                            Write-log "Finished processing time: [$FinishTime]"
+                            Write-log "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
+                            Write-log "All Operations Finished!! Exit !"
+                            Write-log "***************************************************************************************************"  
+                        }
 
-                $TaskName = "EverGreen Update Evaluation"
-                $SchedulerPath = "\Microsoft\Windows\PowerShell\ScheduledJobs"
-                $trigger = New-JobTrigger -Daily -At 12:00
-                $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
+                        $TaskName = "EverGreen Update Evaluation"
+                        $SchedulerPath = "\Microsoft\Windows\PowerShell\ScheduledJobs"
+                        $trigger = New-JobTrigger -Daily -At 12:00
+                        $options = New-ScheduledJobOption -StartIfOnBattery  -RunElevated
 
-                If((Get-LocalUser "service.scheduler" -ErrorAction SilentlyContinue).Enabled -eq $true){Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue}
-                $password = ConvertTo-SecureString (New-Guid).Guid -AsPlainText -Force
-                $user = New-LocalUser "service.scheduler" -Password $Password -Description "For scheduling in tasks from system account" -ErrorAction SilentlyContinue
-                $credentials = New-Object System.Management.Automation.PSCredential($user.name, $password)
+                        If((Get-LocalUser "service.scheduler" -ErrorAction SilentlyContinue).Enabled -eq $true){Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue}
+                        $password = ConvertTo-SecureString (New-Guid).Guid -AsPlainText -Force
+                        $user = New-LocalUser "service.scheduler" -Password $Password -Description "For scheduling in tasks from system account" -ErrorAction SilentlyContinue
+                        $credentials = New-Object System.Management.Automation.PSCredential($user.name, $password)
 
-                $task = Get-ScheduledTask -taskname $taskName -ErrorAction SilentlyContinue
-                if ($null -ne $task){Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false}
+                        $task = Get-ScheduledTask -taskname $taskName -ErrorAction SilentlyContinue
+                        if ($null -ne $task){Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false}
 
-                Register-ScheduledJob -Name $taskName  -Trigger $trigger -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval -Credential $credentials -ErrorAction SilentlyContinue|Out-Null
-                $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highes
-                Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
-                Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue
-                write-log "Update Evaluation Scheduled task installed successfully under name $Taskname!"
+                        Register-ScheduledJob -Name $taskName  -Trigger $trigger -ScheduledJobOption $options -ScriptBlock $ScriptBlock_UpdateEval -Credential $credentials -ErrorAction SilentlyContinue|Out-Null
+                        $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highes
+                        Set-ScheduledTask -TaskPath $SchedulerPath -TaskName $taskName -Principal $principal|Out-Null
+                        Remove-LocalUser "service.scheduler" -Confirm:$False -ErrorAction SilentlyContinue
+                        write-log "Update Evaluation Scheduled task installed successfully under name $Taskname!"
+                                
+                    
+                    }
             }
         Else
         
