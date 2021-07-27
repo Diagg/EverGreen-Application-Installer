@@ -431,12 +431,10 @@ Function Invoke-AsSystemNow
 
 Function Initialize-Prereq
     {
-
         Param(
                 [Parameter(Mandatory = $false)]
                 [switch]$NoModuleUpdate
             )
-
 
         ## Set Tls to 1.2
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
