@@ -94,7 +94,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # By Diagg/OSD-Couture.com
 # 
 # Script Version:  0.37 - 08/06/2021 - 
-# Script Version:  0.4 - 19/03/2022 - fully reworked to be even more close aware
+# Script Version:  0.4 - 19/03/2022 - fully reworked
 
 
 #Requires -Version 5
@@ -103,7 +103,8 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 [CmdletBinding()]
 param(
 
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName='Online')]
+        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
         [Parameter(ParameterSetName = 'Predownload')]
         [ValidateSet("1Password","7zip","AdobeAcrobat","AdobeAcrobatReaderDC","AdobeBrackets","AdoptOpenJDK","Anki","AtlassianBitbucket","BISF","BitwardenDesktop","CitrixAppLayeringFeed",
