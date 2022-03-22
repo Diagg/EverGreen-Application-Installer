@@ -1,4 +1,4 @@
-# Version 0.20
+# Version 0.21 - 22/03/2022
 
 Function Get-AppInfo
     {
@@ -7,6 +7,8 @@ Function Get-AppInfo
             [string]$Architecture,
             [Parameter(Mandatory = $false)]
             [string]$Language,
+            [Parameter(Mandatory = $false)]
+            [string]$Channel,            
             [Parameter(Mandatory = $false)]
             [bool]$DisableUpdate,
             [Parameter(Mandatory = $false)]
@@ -23,6 +25,7 @@ Function Get-AppInfo
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
+            AppInstallChannel = $($Channel.ToUpper())
             AppInstallCMD = "MsiExec"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010,1641)
@@ -92,8 +95,9 @@ Function Invoke-AdditionalInstall
 
         If ($SetAsDefault)
             {
-                Set-DefaultFileAssociation -AppToDefault "Google Chrome" -ProtocolExt "http"
-                Set-DefaultFileAssociation -AppToDefault "Google Chrome" -ProtocolExt "https"
+                #22/02/2022 To be changed to work in user context !
+                Set-FTA $($Script:AppInfo.AppInstallName) http
+                Set-FTA $($Script:AppInfo.AppInstallName) https
             }
 
         If ($EnterpriseMode)
