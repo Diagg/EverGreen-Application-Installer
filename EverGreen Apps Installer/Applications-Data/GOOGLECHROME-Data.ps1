@@ -1,4 +1,4 @@
-# Version 0.22 - 25/03/2022
+# Version 0.23 - 25/03/2022
 
 Function Get-AppInfo
     {
@@ -20,6 +20,7 @@ Function Get-AppInfo
             AppVendor = "Google"
             AppFiendlyName = "Chrome"
             AppInstallName = "Google Chrome"
+            AppPtaName = "ChromeHTML"
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -96,12 +97,12 @@ Function Invoke-AdditionalInstall
         If ($SetAsDefault)
             {
                 $Script_LogPath = "`$ContentPath = ""$($script:ContentPath)"" `n"
-                $Script_InstallName = "`$InstallName = ""$($Script:AppInfo.AppInstallName)"" `n"
+                $Script_InstallName = "`$PTAName = ""$($Script:AppInfo.AppPtaName)"" `n"
  
                 $Script_Assoc = {
                         ."$ContentPath\SFTA.ps1"
-                        Set-FTA $InstallName http
-                        Set-FTA $InstallName https
+                        Set-PTA $PTAName http
+                        Set-PTA $PTAName https
                     }
 
                 $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_InstallName.ToString() + $Script_Assoc.ToString())
