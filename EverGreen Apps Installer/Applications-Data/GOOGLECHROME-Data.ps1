@@ -1,4 +1,4 @@
-# Version 0.21 - 22/03/2022
+# Version 0.22 - 25/03/2022
 
 Function Get-AppInfo
     {
@@ -95,9 +95,19 @@ Function Invoke-AdditionalInstall
 
         If ($SetAsDefault)
             {
-                #22/02/2022 To be changed to work in user context !
-                Set-FTA $($Script:AppInfo.AppInstallName) http
-                Set-FTA $($Script:AppInfo.AppInstallName) https
+                $Script_LogPath = "`$ContentPath = ""$($script:ContentPath)"" `n"
+                $Script_InstallName = "`$InstallName = ""$($Script:AppInfo.AppInstallName)"" `n"
+ 
+                $Script_Assoc = {
+                        ."$ContentPath\SFTA.ps1"
+                        Set-FTA $InstallName http
+                        Set-FTA $InstallName https
+                    }
+
+                $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_InstallName.ToString() + $Script_Assoc.ToString())
+
+                Invoke-ECKScheduledTask -HostScriptPath $CurrentScriptFullName -TaskName 'Set-Assoc' -Context user -LogPath $LogDir -ScriptBlock $Script_Assoc -now
+
             }
 
         If ($EnterpriseMode)
