@@ -1,4 +1,4 @@
-# Version 0.25 - 25/03/2022
+# Version 0.26 - 25/03/2022
 
 Function Get-AppInfo
     {
@@ -113,7 +113,8 @@ Function Invoke-AdditionalInstall
 
         If ($EnterpriseMode)
             {
-
+                # Remove Desktop Icon
+                Remove-item 'C:\Users\Public\desktop\Google Chrome.lnk' -Force
             } 
 
     }
