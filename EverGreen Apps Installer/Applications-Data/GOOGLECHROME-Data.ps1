@@ -1,4 +1,4 @@
-# Version 0.26 - 25/03/2022
+# Version 0.28 - 29/03/2022
 
 Function Get-AppInfo
     {
@@ -107,7 +107,7 @@ Function Invoke-AdditionalInstall
 
                 $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_InstallName.ToString() + $Script_Assoc.ToString())
 
-                Invoke-ECKScheduledTask -HostScriptPath $CurrentScriptFullName -TaskName 'Set-Assoc' -Context user -LogPath $LogDir -ScriptBlock $ScriptBlock -now -DontAutokilltask
+                Invoke-ECKScheduledTask -HostScriptPath $CurrentScriptFullName -TaskName 'Set-Assoc' -Context user -LogPath $LogDir -ScriptBlock $ScriptBlock -now
 
             }
 
