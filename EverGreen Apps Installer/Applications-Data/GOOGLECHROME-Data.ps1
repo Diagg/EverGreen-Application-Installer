@@ -1,4 +1,4 @@
-# Version 0.31 -25/04/2022
+# Version 0.31.1 -25/04/2022
 
 Function Get-AppInfo
     {
@@ -21,10 +21,10 @@ Function Get-AppInfo
             AppFiendlyName = "Chrome"
             AppInstallName = "Google Chrome"
             AppPtaName = "ChromeHTML"
-            AppChannel = 'stable'
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+            AppInstallChannel = $($Channel.ToUpper())           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
             AppInstallCMD = "MsiExec"
