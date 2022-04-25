@@ -92,6 +92,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.5 - 22/03/2022 - Script logic changed to support unstallation before installation, added parameter Channel to allow application selection by channel. 
 # Script Version:  0.6 - 24/03/2022 - Removed Invoke-AsCurrentUser and Invoke-AsSystemNow Functions
 # Script Version:  0.7 - 25/04/2022 - Code reworked, all functions removed
+# Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing
 
 
 #Requires -Version 5
@@ -270,60 +271,62 @@ Try
         If ([String]::IsNullOrWhiteSpace($InstallSourcePath)){If(-not(Test-path $AppDownloadDir)){New-Item $AppDownloadDir -Force -ItemType Directory -ErrorAction SilentlyContinue|Out-Null}} 
 
         $StartupTime = [DateTime]::Now
-        Write-EckLog "***************************************************************************************************" -Path $log
-        Write-EckLog "***************************************************************************************************" -Path $log
-        Write-EckLog "Release $((Select-String -Pattern "Version:" -Path $Script:CurrentScriptFullName -CaseSensitive).Line[0])" -Path $log
-        Write-EckLog "Started processing time: [$StartupTime]" -Path $log
-        Write-EckLog "Script Name: $CurrentScriptFullName" -Path $log
-        Write-EckLog "Selected Application: $Application" -Path $log
-        If ($Uninstall -ne $true) {Write-EckLog "Selected Application Architecture: $Architecture" -Path $log}
-        Write-EckLog "***************************************************************************************************" -Path $log
-        Write-EckLog "Powershell Home: $PSHOME" -Path $log
-        Write-EckLog "Current Session ID: $PID" -Path $log
-        Write-EckLog "Log Path: $log" -Path $log
-        Write-EckLog "System Host Name: $($ECK.SystemHostName)" -Path $log
-        Write-EckLog "System IP Address: $($ECK.SystemIPAddress)" -Path $log
-        Write-EckLog "System OS version: Windows $($ECK.OSVersion) - Build $($ECK.OSBuild) ($($ECK.OsFriendlyName))" -Path $log
-        Write-EckLog "System OS Architecture is x64: $($ECK.OSArchitectureIsX64)" -Path $log
-        Write-EckLog "Logged on user: $($ECK.User)" -Path $log
-        Write-EckLog "Logged on user UPN: $($ECK.UserUPN)" -Path $log
-        Write-EckLog "Execution Context is Admin: $($ECK.UserIsAdmin)" -Path $log 
-        Write-EckLog "Execution Context is System: $($ECK.UserIsSystem)" -Path $log
-        Write-EckLog "Execution Context is TrustedInstaller: $($ECK.RunAsTrustedInstaller)" -Path $log 
+        Write-EckLog "***************************************************************************************************"
+        Write-EckLog "***************************************************************************************************"
+        Write-ECKLog "Started processing time: [$StartupTime]" 
+        Write-ECKLog "Script Name: $CurrentScriptName" 
+        Write-ECKLog "Script Version: $($Version[0])"
+        Write-ECKLog "Script Date: $($Version[1])"
+        Write-EckLog "Selected Application: $Application"
+        If ($Uninstall -ne $true) {Write-EckLog "Selected Application Architecture: $Architecture"}
+        Write-EckLog "***************************************************************************************************"
+        Write-EckLog "Powershell Home: $PSHOME"
+        Write-EckLog "Current Session ID: $PID"
+        Write-EckLog "Log Path: $log"
+        Write-EckLog "System Host Name: $($ECK.SystemHostName)"
+        Write-EckLog "System IP Address: $($ECK.SystemIPAddress)"
+        Write-EckLog "System OS version: Windows $($ECK.OSVersion) - Build $($ECK.OSBuild) ($($ECK.OsFriendlyName))"
+        Write-EckLog "System OS Architecture is x64: $($ECK.OSArchitectureIsX64)"
+        Write-EckLog "Logged on user: $($ECK.User)"
+        Write-EckLog "Logged on user UPN: $($ECK.UserUPN)"
+        Write-EckLog "Execution Context is Admin: $($ECK.UserIsAdmin)" 
+        Write-EckLog "Execution Context is System: $($ECK.UserIsSystem)"
+        Write-EckLog "Execution Context is TrustedInstaller: $($ECK.RunAsTrustedInstaller)" 
 
 
         If ($Uninstall -eq $true)
-            {Write-EckLog "Selected Action: Uninstallation" -Path $log}
+            {Write-EckLog "Selected Action: Uninstallation"}
         Elseif (-not([String]::IsNullOrWhiteSpace($InstallSourcePath)))
             {
-                Write-EckLog "Selected Action: Installation from offline source" -Path $log
-                Write-EckLog "Install Option: Offline location $InstallSourcePath" -Path $log
+                Write-EckLog "Selected Action: Installation from offline source"
+                Write-EckLog "Install Option: Offline location $InstallSourcePath"
                 $OfflineInstall = $true
             }
         ElseIf ($DisableUpdate -eq $true)
-            {Write-EckLog "Install Option: Disabling update feature" -Path $log}
+            {Write-EckLog "Install Option: Disabling update feature"}
         ElseIf (-not([String]::IsNullOrWhiteSpace($PreDownloadPath)))
             {
-                Write-EckLog "Selected Action: Predownloading without installation" -Path $log
-                Write-EckLog "Install Option: Download location $PreDownloadPath" -Path $log
+                Write-EckLog "Selected Action: Predownloading without installation"
+                Write-EckLog "Install Option: Download location $PreDownloadPath"
             }           
         Else
-            {Write-EckLog "Selected Action: Installation" -Path $log}
+            {Write-EckLog "Selected Action: Installation"}
     
 
         ##== Download APP Data
-        Write-EckLog "Retriving data from Github for Application $Application" -Path $log
+        Write-EckLog "Retriving data from Github for Application $Application"
         $AppDataCode = Get-ECKGithubContent -URI "$GithubRepo/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$($Application.toUpper())-Data.ps1"
+        Write-ECKlog "Downloaded File $($Application.toUpper())-Data.ps1 - $($AppDataCode.Split([Environment]::NewLine)[0].replace('# ',''))"
         Try 
             {
                 If ($AppDataCode -ne $False){Invoke-Expression $AppDataCode -ErrorAction Stop} 
-                Else{Write-EckLog "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 -Path $log ; Exit} 
+                Else{Write-EckLog "[Error] Unable to execute $Application data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
             }
         Catch 
             {
-                Write-EckLog "[Error] Unable to execute $Application data garthering, logical error occurs, Aborting !!!" -Type 3 -Path $log
-                Write-EckLog $Error[0].InvocationInfo.PositionMessage.ToString() -type 3 -Path $log
-                Write-EckLog $Error[0].Exception.Message.ToString() -type 3 -Path $log
+                Write-EckLog "[Error] Unable to execute $Application data garthering, logical error occurs, Aborting !!!" -Type 3
+                Write-EckLog $Error[0].InvocationInfo.PositionMessage.ToString() -type 3
+                Write-EckLog $Error[0].Exception.Message.ToString() -type 3
                 Exit 1
             }
 
@@ -336,13 +339,13 @@ Try
 
         If ($Script:AppInfo.AppIsInstalled -eq $true)
             {
-                Write-EckLog "Version $($Script:AppInfo.AppInstalledVersion) of $Application detected!" -Path $log
+                Write-EckLog "Version $($Script:AppInfo.AppInstalledVersion) of $Application detected!"
                 If ($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true){$Uninstall = $true}
             }
         Else
             {
                 $AppInstallNow = $true
-                Write-EckLog "No Installed version of $Application detected!" -Path $log
+                Write-EckLog "No Installed version of $Application detected!"
             }
 
 
@@ -351,10 +354,10 @@ Try
         ##############################
         If ($PreScriptURI)
             {
-                Write-EckLog "Invoking Prescript" -Path $log
+                Write-EckLog "Invoking Prescript"
                 If ($GithubToken){$PreScript = Get-ECKGithubContent -URI $PreScriptURI -GithubToken $GithubToken} Else {$PreScript = Get-ECKGithubContent -URI $PreScriptURI}
                 Try {Invoke-Command $PreScript}
-                Catch {Write-EckLog "[Error] Prescript Failed to execute" -Type 3 -Path $log}
+                Catch {Write-EckLog "[Error] Prescript Failed to execute" -Type 3}
             }
 
         
@@ -362,23 +365,23 @@ Try
         #### Application Uninstallation
         ###############################
 
-        If (($Uninstall.IsPresent) -or ($Uninstall -eq $true) -or ($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true))
+        If (($Uninstall.IsPresent) -or ($Uninstall -eq $true) -or ($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true -and $Uninstall -eq $true))
             {
                 If ($Script:AppInfo.AppIsInstalled -eq $False)
-                    {Write-EckLog "Application $Application is not installed, nothing to uninstall ! All operation finished!!" -Path $log}
+                    {Write-EckLog "Application $Application is not installed, nothing to uninstall ! All operation finished!!"}
                 Else
                     {
                         ##== Uninstall
-                        Write-EckLog "Uninstalling $Application !" -Path $log
-                        Write-EckLog "About to run $($Script:AppInfo.AppUninstallCMD) $($Script:AppInfo.AppUninstallParameters)" -Path $log
+                        Write-EckLog "Uninstalling $Application !"
+                        Write-EckLog "About to run $($Script:AppInfo.AppUninstallCMD) $($Script:AppInfo.AppUninstallParameters)"
                         $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
                         If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
-                            {Write-EckLog "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!" -Path $log}
+                            {Write-EckLog "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
                         Else
-                            {Write-EckLog "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2 -Path $log}
+                            {Write-EckLog "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
 
                         ##== Additionnal removal action
-                        Write-EckLog "Uninstalling additionnal items !" -Path $log
+                        Write-EckLog "Uninstalling additionnal items !"
                         Invoke-AdditionalUninstall
                         Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
                     }
@@ -401,12 +404,12 @@ Try
         If ($AppUpdateStatus)
             {
                 $AppInstallNow = $true
-                Write-EckLog "New version of $($Script:AppInfo.AppInstallName) detected! Release version: $($Script:AppEverGreenInfo.Version)" -Path $log
+                Write-EckLog "New version of $($Script:AppInfo.AppInstallName) detected! Release version: $($Script:AppEverGreenInfo.Version)"
             }    
         Else 
             {
                 $AppInstallNow = $False
-                Write-EckLog "Version Available online is similar to installed version, Nothing to install !" -Path $log
+                Write-EckLog "Version Available online is similar to installed version, Nothing to install !"
             } 
 
         ##==Download
@@ -416,7 +419,7 @@ Try
                 If (-not(Test-path $PreDownloadPath))
                     {
                         $Iret = New-Item $PreDownloadPath -ItemType Directory -Force -ErrorAction SilentlyContinue
-                        If ([string]::IsNullOrWhiteSpace($Iret)){Write-EckLog "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 -Path $log ; Exit}
+                        If ([string]::IsNullOrWhiteSpace($Iret)){Write-EckLog "[ERROR] Unable to create download folder at $PreDownloadPath, Aborting !!!" -Type 3 ; Exit}
                     }
                 
                 $AppDownloadDir = $PreDownloadPath
@@ -425,49 +428,49 @@ Try
 
         If (([String]::IsNullOrWhiteSpace($InstallSourcePath) -and $AppInstallNow -eq $True) -or (-not([String]::IsNullOrWhiteSpace($PreDownloadPath))))
             {
-                Write-EckLog "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet" -Path $log
-                Write-EckLog "Download Url: $($Script:AppEverGreenInfo.uri)" -Path $log
-                Write-EckLog "Downloading installer for $Application - $Architecture"  -Path $log
+                Write-EckLog "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
+                Write-EckLog "Download Url: $($Script:AppEverGreenInfo.uri)"
+                Write-EckLog "Downloading installer for $Application - $Architecture" 
                 $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
-                Write-EckLog "Successfully downloaded $( Split-Path $InstallSourcePath -Leaf) to folder $(Split-Path $InstallSourcePath)" -Path $log
+                Write-EckLog "Successfully downloaded $( Split-Path $InstallSourcePath -Leaf) to folder $(Split-Path $InstallSourcePath)"
             }
 
         ##==Install
         if ($AppInstallNow -eq $True)
             {
                 ## Rebuild Parametrers
-                Write-EckLog "Download directory: $InstallSourcePath" -Path $log
+                Write-EckLog "Download directory: $InstallSourcePath"
                 If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
                     {
                         $Script:AppInfo.AppInstallParameters = $Script:AppInfo.AppInstallParameters.replace("##APP##",$InstallSourcePath)
                         $Script:AppInfo.AppInstallCMD  = $Script:AppInfo.AppInstallCMD.replace("##APP##",$InstallSourcePath)
                     }
                 Else
-                    {Write-EckLog "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 -Path $log ; Exit}
+                    {Write-EckLog "[ERROR] Unable to find application at $InstallSourcePath or Filename with extension may be missing, Aborting !!!" -Type 3 ; Exit}
 
                 
                 ## Execute Intall Program
-                Write-EckLog "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)" -Path $log
+                Write-EckLog "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
                 $Iret = (Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
                 If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
                     {
-                        Write-EckLog "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!" -Path $log
+                        Write-EckLog "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"
                         $Script:AppInfo.AppArchitecture = $Architecture.ToUpper()
                         $Script:AppInfo.AppInstalledVersion = $($Script:AppEverGreenInfo.version)
                     }
                 Else
-                    {Write-EckLog "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3 -Path $log}
+                    {Write-EckLog "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
 
 
                 ##== Install Additionnal Componants
-                Write-EckLog "Installing additionnal Componants !" -Path $log
+                Write-EckLog "Installing additionnal Componants !"
                 Invoke-AdditionalInstall -SetAsDefault $SetAsDefault.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent
 
 
                 ## Clean Download Folder
                 if ([String]::IsNullOrWhiteSpace($PreDownloadPath) -and $OfflineInstall -ne $true )
                     {
-                        Write-EckLog "cleaning Download folder" -Path $log
+                        Write-EckLog "cleaning Download folder"
                         If (test-path $InstallSourcePath){Remove-Item $InstallSourcePath -recurse -Force -Confirm:$false -ErrorAction SilentlyContinue}
                     }
             }
@@ -476,7 +479,7 @@ Try
         ##== Remove Update capabilities
         If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
             {
-                Write-EckLog "Disabling $Application update feature !" -Path $log
+                Write-EckLog "Disabling $Application update feature !"
                 Invoke-DisableUpdateCapability
             }
 
@@ -486,7 +489,7 @@ Try
             {
                 ##== Tag registry
                 Get-AppInstallStatus
-                Write-EckLog "Tagging in the registry !" -Path $log
+                Write-EckLog "Tagging in the registry !"
                 
                 $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application"
 
@@ -503,7 +506,7 @@ Try
                 
 
                 ##== Create Scheduled task
-                Write-EckLog "Creating Update Evaluation Scheduled Task !" -Path $log
+                Write-EckLog "Creating Update Evaluation Scheduled Task !"
                 $ScriptBlock_UpdateEval = {
 
                     Get-Module 'EndpointCloudkit' -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
@@ -570,21 +573,21 @@ Try
                 Write-EckLog "Invoking Postscript" -LogPath $log
                 If ($GithubToken){$PostScript = Get-ECKGithubContent -URI $PostScriptURI -GithubToken $GithubToken} Else {$PostScript = Get-ECKGithubContent -URI $PostScriptURI}
                 Try {Invoke-Expression $PostScript -ErrorAction Stop}
-                Catch {Write-EckLog "[Error] Postscript Failed to execute" -Type 3 -Path $log}
+                Catch {Write-EckLog "[Error] Postscript Failed to execute" -Type 3}
             }
 
         $FinishTime = [DateTime]::Now
-        Write-EckLog "***************************************************************************************************" -Path $log
-        Write-EckLog "Finished processing time: [$FinishTime]" -Path $log
-        Write-EckLog "Operation duration: [$(($FinishTime - $StartupTime).ToString())]" -Path $log
-        Write-EckLog "All Operations for $Application Finished!! Exit !" -Path $log
-        Write-EckLog "***************************************************************************************************" -Path $log
+        Write-EckLog "***************************************************************************************************"
+        Write-EckLog "Finished processing time: [$FinishTime]"
+        Write-EckLog "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
+        Write-EckLog "All Operations for $Application Finished!! Exit !"
+        Write-EckLog "***************************************************************************************************"
         Exit 0 
      }   
 Catch
     {
-        Write-EckLog "[ERROR] Fatal Error, the program has stopped !!!" -Type 3 -Path $log
-        Write-EckLog $Error[0].InvocationInfo.PositionMessage.ToString() -type 3 -Path $log
-        Write-EckLog $Error[0].Exception.Message.ToString() -type 3 -Path $log
+        Write-EckLog "[ERROR] Fatal Error, the program has stopped !!!" -Type 3
+        Write-EckLog $Error[0].InvocationInfo.PositionMessage.ToString() -type 3
+        Write-EckLog $Error[0].Exception.Message.ToString() -type 3
         Exit 99
     }           
