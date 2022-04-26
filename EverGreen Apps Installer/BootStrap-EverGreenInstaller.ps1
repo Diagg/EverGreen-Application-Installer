@@ -92,7 +92,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.5 - 22/03/2022 - Script logic changed to support unstallation before installation, added parameter Channel to allow application selection by channel. 
 # Script Version:  0.6 - 24/03/2022 - Removed Invoke-AsCurrentUser and Invoke-AsSystemNow Functions
 # Script Version:  0.7 - 25/04/2022 - Code reworked, all functions removed
-# Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing
+# Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing, Return stream of installed application is now added to $script:Appinfo.AppExecReturn
 
 
 #Requires -Version 5
@@ -334,7 +334,7 @@ Try
         ##############################
         #### Gather Informations
         ##############################
-        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel
+        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent
         Get-AppInstallStatus
 
         If ($Script:AppInfo.AppIsInstalled -eq $true)
@@ -399,6 +399,9 @@ Try
         If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
         If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
 
+        if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -like '*stable*'}
+        if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo|Select-Object -Last 1}
+
         ##==Check if we need to update
         $AppUpdateStatus = Get-AppUpdateStatus
         If ($AppUpdateStatus)
@@ -451,8 +454,10 @@ Try
                 
                 ## Execute Intall Program
                 Write-EckLog "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
-                $Iret = (Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru).ExitCode
-                If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $Iret)
+                $ExecProcess = Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru
+                $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppExecReturn' -Value $ExecProcess
+                
+                If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $ExecProcess.ExitCode)
                     {
                         Write-EckLog "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"
                         $Script:AppInfo.AppArchitecture = $Architecture.ToUpper()
@@ -477,7 +482,7 @@ Try
 
  
         ##== Remove Update capabilities
-        If ($DisableUpdate -and [String]::IsNullOrWhiteSpace($PreDownloadPath))
+        If ([String]::IsNullOrWhiteSpace($PreDownloadPath) -and ($DisableUpdate -or $EnterpriseMode -or $Script:AppInfo.AppInstallOptionDisableUpdate -or $Script:AppInfo.AppInstallOptionEnterprise))
             {
                 Write-EckLog "Disabling $Application update feature !"
                 Invoke-DisableUpdateCapability
@@ -502,7 +507,7 @@ Try
                 }
 
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Tags|Add-Member -MemberType NoteProperty -Name 'Language' -Value $($Script:AppInfo.AppInstallLanguage) -Forcel}
-                New-ECKTag -Regpath $RegTag -TagsObject
+                New-ECKTag -Regpath $RegTag -TagsObject $Tags -LogPath 
                 
 
                 ##== Create Scheduled task
@@ -559,8 +564,8 @@ Try
                 }
 
                 ## Run ScriptBlock
-                $trigger = New-JobTrigger -Daily -At 12:00
-                Invoke-ECKScheduledTask -TaskName "Greenstaller Update Evaluation" -$NormalTaskName -triggerObject $trigger -ScriptBlock $ScriptBlock_UpdateEval
+                $trigger = New-ScheduledTaskTrigger -Daily -At 12:00
+                Invoke-ECKScheduledTask -TaskName "Greenstaller Update Evaluation" -NormalTaskName -triggerObject $trigger -ScriptBlock $ScriptBlock_UpdateEval -DontAutokilltask
                 Write-EckLog "Update Evaluation Scheduled task installed successfully under name $Taskname!"          
             }
   

@@ -12,7 +12,9 @@ Function Get-AppInfo
             [Parameter(Mandatory = $false)]
             [bool]$DisableUpdate,
             [Parameter(Mandatory = $false)]
-            [bool]$EnterpriseMode
+            [bool]$EnterpriseMode,
+            [Parameter(Mandatory = $false)]
+            [bool]$SetAsDefault
         )
          
         [PSCustomObject]@{
@@ -21,12 +23,16 @@ Function Get-AppInfo
             AppFiendlyName = "Chrome"
             AppInstallName = "Google Chrome"
             AppPtaName = "ChromeHTML"
+            AppPtaExt = @('Http','Https')
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallChannel = $($Channel.ToUpper())           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
+            AppInstallOptionDefault = $SetAsDefault
+            AppInstallOptionEnterprise = $EnterpriseMode
+            AppInstallOptionDisableUpdate = $DisableUpdate
             AppInstallCMD = "MsiExec"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010,1641)
@@ -87,15 +93,9 @@ Function Get-AppUpdateStatus
 
 Function Invoke-AdditionalInstall
     {
-        [Parameter(Mandatory = $false)]
-        [Switch]$SetAsDefault,
-        [Parameter(Mandatory = $false)]
-        [Switch]$EnterpriseMode,
-        [Parameter(Mandatory = $false)]
-        [Switch]$DisableUpdate
-
-        If ($SetAsDefault)
+        If ($Script:AppInfo.AppInstallOptionDefault -or $Script:AppInfo.AppInstallOptionEnterprise)
             {
+                # Set Default App Association
                 $Script_LogPath = "`$ContentPath = ""$($script:ContentPath)"" `n"
                 $Script_InstallName = "`$PTAName = ""$($Script:AppInfo.AppPtaName)"" `n"
  
@@ -106,17 +106,17 @@ Function Invoke-AdditionalInstall
                     }
 
                 $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_InstallName.ToString() + $Script_Assoc.ToString())
-
                 Invoke-ECKScheduledTask -HostScriptPath $CurrentScriptFullName -TaskName 'Set-Assoc' -Context user -LogPath $LogDir -ScriptBlock $ScriptBlock -now
-
             }
 
-        If ($EnterpriseMode)
+        If ($Script:AppInfo.AppInstallOptionEnterprise)
             {
                 # Remove Desktop Icon
                 Remove-item 'C:\Users\Public\desktop\Google Chrome.lnk' -Force
-            } 
 
+                # Remove Automatic Updates
+                $Script:AppInfo.AppInstallOptionDisableUpdate = $true
+            } 
     }
 
 
