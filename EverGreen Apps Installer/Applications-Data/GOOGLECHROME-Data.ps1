@@ -37,7 +37,7 @@ Function Get-AppInfo
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010,1641)
             AppUninstallSuccessReturnCodes = @(0,3010,1641)
-            AppMustUninstallBeforeUpdate = $false
+            AppMustUninstallBeforeUpdate = $true
             AppMustUninstallOnArchChange = $true
         }
     }

@@ -93,7 +93,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.6 - 24/03/2022 - Removed Invoke-AsCurrentUser and Invoke-AsSystemNow Functions
 # Script Version:  0.7 - 25/04/2022 - Code reworked, all functions removed
 # Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing, Return stream of installed application is now added to $script:Appinfo.AppExecReturn
-# Script Version:  0.8.1 - 27/04/2022 - Bug Fix
+# Script Version:  0.8.1 - 27/04/2022 - Bug Fix, Evaluation check script was not working, Registry keys changed to HKLM:\SOFTWARE\OSDC\Greenstaller
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -383,7 +383,7 @@ Try
                         ##== Additionnal removal action
                         Write-EckLog "Uninstalling additionnal items !"
                         Invoke-AdditionalUninstall
-                        Remove-Item "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
+                        Remove-Item "HKLM:\SOFTWARE\OSDC\Greenstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
                     }
             }
 
@@ -496,7 +496,7 @@ Try
                 Get-AppInstallStatus
                 Write-EckLog "Tagging in the registry !"
                 
-                $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller\$Application"
+                $RegTag = "HKLM:\SOFTWARE\OSDC\Greenstaller\$Application"
 
                 $Tags = [PSCustomObject]@{
                     GreenAppName = $Application
@@ -504,6 +504,7 @@ Try
                     Version = $($Script:AppInfo.AppInstalledVersion)
                     Architecture = $($Script:AppInfo.AppArchitecture)
                     Status = 'UpToDate'
+                    Channel = $($Script:AppInfo.AppInstallChannel)
                 }
 
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Tags|Add-Member -MemberType NoteProperty -Name 'Language' -Value $($Script:AppInfo.AppInstallLanguage) -Forcel}
@@ -511,62 +512,67 @@ Try
                 
 
                 ##== Create Scheduled task
-                Write-EckLog "Creating Update Evaluation Scheduled Task !"
-                $ScriptBlock_UpdateEval = {
+                If ($Script:AppInfo.AppInstallOptionDisableUpdate -eq $true)
+                    {
+                        Write-EckLog "Creating Update Evaluation Scheduled Task !"
+                        $ScriptBlock_UpdateEval = {
 
-                    Get-Module 'EndpointCloudkit' -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
-                    $LogPath = "C:\Windows\Logs\Greenstaller\Evergreen-ApplicationUpdateEvaluation.log"
-                    New-ECKEnvironment -LogPath $LogPath
+                            Get-Module 'EndpointCloudkit*' -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
+                            $LogPath = "C:\Windows\Logs\Greenstaller\Evergreen-ApplicationUpdateEvaluation.log"
+                            New-ECKEnvironment -LogPath $LogPath
 
-                    ##== Main
-                    $StartupTime = [DateTime]::Now
-                    Write-EckLog 
-                    Write-EckLog "***************************************************************************************************"
-                    Write-EckLog "***************************************************************************************************"
-                    Write-EckLog "Started processing time: [$StartupTime]"
-                    Write-EckLog "Script Name: ApplicationUpdateEvaluation"
-                    Write-EckLog "***************************************************************************************************"
+                            ##== Main
+                            $StartupTime = [DateTime]::Now
+                            Write-EckLog "***************************************************************************************************"
+                            Write-EckLog "***************************************************************************************************"
+                            Write-EckLog "Started processing time: [$StartupTime]"
+                            Write-EckLog "Script Name: ApplicationUpdateEvaluation"
+                            Write-EckLog "***************************************************************************************************"
 
-                    $RegTag = "HKLM:\SOFTWARE\OSDC\EverGreenInstaller"
-                    If (test-path $RegPath)
-                        {
-                            $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
-
-                            ForEach ($Regitem in $EverGreenApps)
+                            $RegTag = "HKLM:\SOFTWARE\OSDC\Greenstaller"
+                            If (test-path $RegTag)
                                 {
-                                    $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
-                                    If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
+                                    $EverGreenApps = (Get-ChildItem $RegTag).PSChildName
+
+                                    ForEach ($Regitem in $EverGreenApps)
                                         {
-                                            Write-EckLog "Application : $Regitem"
-                                            $AppInstalledVersion = $AppInfo.DisplayVersion
-                                            $AppInstalledArchitecture = $AppInfo.Architecture
-                                            Write-EckLog "Installed version : $AppInstalledVersion"
-
-                                            Write-EckLog "Checking for Newer version online..."
-                                            $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
-                                            Write-EckLog "Latest version available online: $($AppEverGreenInfo.Version)"
-
-                                            If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                            $AppInfo = Get-ItemProperty -Path "$RegTag\$Regitem"
+                                            If (-not ([string]::IsNullOrWhiteSpace($AppInfo)))
                                                 {
-                                                    Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
-                                                    Write-EckLog "$Regitem application status changed to Obsolete !"
+                                                    Write-EckLog "Application : $Regitem"
+                                                    $AppInstalledVersion = $AppInfo.Version
+                                                    $AppInstalledArchitecture = $AppInfo.Architecture
+                                                    $AppInstalledChannel = $AppInfo.Channel
+                                                    Write-EckLog "Installed version : $AppInstalledVersion"
+
+                                                    Write-EckLog "Checking for Newer version online..."
+                                                    $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
+                                                    If (-not([string]::IsNullOrWhiteSpace($AppInstalledChannel))){$AppEverGreenInfo = $AppEverGreenInfo|Where-Object Channel -eq $AppInstalledChannel}
+                                                    Write-EckLog "Latest version available online: $($AppEverGreenInfo.Version)"
+
+                                                    If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                                        {
+                                                            Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
+                                                            Write-EckLog "$Regitem application status changed to Obsolete !"
+                                                        }
                                                 }
                                         }
                                 }
-                            }
 
-                    $FinishTime = [DateTime]::Now
-                    Write-EckLog "***************************************************************************************************"
-                    Write-EckLog "Finished processing time: [$FinishTime]"
-                    Write-EckLog "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
-                    Write-EckLog "All Operations Finished!! Exit !"
-                    Write-EckLog "***************************************************************************************************"  
-                }
+                            $FinishTime = [DateTime]::Now
+                            Write-EckLog "***************************************************************************************************"
+                            Write-EckLog "Finished processing time: [$FinishTime]"
+                            Write-EckLog "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
+                            Write-EckLog "All Operations Finished!! Exit !"
+                            Write-EckLog "***************************************************************************************************"    
+                        }
 
-                ## Run ScriptBlock
-                $trigger = New-ScheduledTaskTrigger -Daily -At 12:00
-                Invoke-ECKScheduledTask -TaskName "Greenstaller Update Evaluation" -NormalTaskName -triggerObject $trigger -ScriptBlock $ScriptBlock_UpdateEval -DontAutokilltask
-                Write-EckLog "Update Evaluation Scheduled task installed successfully under name $Taskname!"          
+                        ## Run ScriptBlock
+                        $trigger = New-ScheduledTaskTrigger -Daily -At 12:00
+                        Invoke-ECKScheduledTask -TaskName "Greenstaller Update Evaluation" -NormalTaskName -triggerObject $trigger -ScriptBlock $ScriptBlock_UpdateEval -DontAutokilltask
+                        Write-EckLog "Update Evaluation Scheduled task installed successfully under name $Taskname!"
+                    }
+          
             }
   
 
