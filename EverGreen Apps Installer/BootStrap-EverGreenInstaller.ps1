@@ -93,7 +93,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.6 - 24/03/2022 - Removed Invoke-AsCurrentUser and Invoke-AsSystemNow Functions
 # Script Version:  0.7 - 25/04/2022 - Code reworked, all functions removed
 # Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing, Return stream of installed application is now added to $script:Appinfo.AppExecReturn
-
+# Script Version:  0.8.1 - 27/04/2022 - Bug Fix
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -246,15 +246,15 @@ Set-Acl $script:ContentPath $Acl
 ##== Do that Omega supreme stuffs and load Includes, environment and dependancies
 Try
     {
-        If ((get-module 'EndpointCloudKit' -ListAvailable -OutVariable ECKMod).Version.Build -gt 11)
+        If ((get-module "EndpointCloudKit*" -ListAvailable -OutVariable ECKMod).Version.Build -gt 11)
             {
-                If(-not (get-module 'EndpointCloudKit')){$ECKMod | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force}
+                If(-not (get-module 'EndpointCloudKit*')){$ECKMod | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force}
                 New-ECKEnvironment -LogPath $Log
                 Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -ContentPath $script:ContentPath -LogPath $log
             }
         Else
             {
-                $ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq.ps1"
+                $ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq-Alpha.ps1"
                 $Fileraw = (Invoke-WebRequest -URI $ScriptURI -UseBasicParsing -ErrorAction Stop).content
                 Invoke-Expression ("<#" + $Fileraw) -ErrorAction Stop
                 Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -ContentPath $script:ContentPath -LogPath $log
@@ -507,7 +507,7 @@ Try
                 }
 
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Tags|Add-Member -MemberType NoteProperty -Name 'Language' -Value $($Script:AppInfo.AppInstallLanguage) -Forcel}
-                New-ECKTag -Regpath $RegTag -TagsObject $Tags -LogPath 
+                New-ECKTag -Regpath $RegTag -TagsObject $Tags
                 
 
                 ##== Create Scheduled task
