@@ -94,6 +94,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.7 - 25/04/2022 - Code reworked, all functions removed
 # Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing, Return stream of installed application is now added to $script:Appinfo.AppExecReturn
 # Script Version:  0.8.1 - 27/04/2022 - Bug Fix, Evaluation check script was not working, Registry keys changed to HKLM:\SOFTWARE\OSDC\Greenstaller
+# Script Version:  0.8.2 - 28/04/2022 - Bug Fix
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -239,7 +240,7 @@ $script:ContentPath = 'C:\ProgramData\ARI-DSI\Greenstaller-Content'
 If (-not(Test-path $script:ContentPath)){New-Item -Path $script:ContentPath -ItemType Directory -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null}
 
 $Acl = Get-ACL $script:ContentPath
-$AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"modify","ContainerInherit,Objectinherit","none","Allow")
+$AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
 $Acl.AddAccessRule($AccessRule)
 Set-Acl $script:ContentPath $Acl
 
@@ -250,14 +251,14 @@ Try
             {
                 If(-not (get-module 'EndpointCloudKit*')){$ECKMod | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force}
                 New-ECKEnvironment -LogPath $Log
-                Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -ContentPath $script:ContentPath -LogPath $log
+                Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -LogPath $log
             }
         Else
             {
                 $ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq-Alpha.ps1"
                 $Fileraw = (Invoke-WebRequest -URI $ScriptURI -UseBasicParsing -ErrorAction Stop).content
                 Invoke-Expression ("<#" + $Fileraw) -ErrorAction Stop
-                Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -ContentPath $script:ContentPath -LogPath $log
+                Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -LogPath $log
             }
     }
 catch 

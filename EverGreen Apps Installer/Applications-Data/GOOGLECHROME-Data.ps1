@@ -1,4 +1,4 @@
-# Version 0.33 - 28/04/2022
+# Version 0.34 - 28/04/2022
 
 Function Get-AppInfo
     {
@@ -94,7 +94,7 @@ Function Invoke-AdditionalInstall
         If ($Script:AppInfo.AppInstallOptionDefault -or $Script:AppInfo.AppInstallOptionEnterprise)
             {
                 # Set Default App Association
-                $Script_LogPath = "`$ContentPath = ""$($script:ContentPath)"" `n"
+                $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
  
                 $Script_Assoc = {
                         ."$ContentPath\SFTA.ps1"
