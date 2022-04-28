@@ -1,4 +1,4 @@
-# Version 0.32 -27/04/2022
+# Version 0.33 - 28/04/2022
 
 Function Get-AppInfo
     {
@@ -22,8 +22,6 @@ Function Get-AppInfo
             AppVendor = "Google"
             AppFiendlyName = "Chrome"
             AppInstallName = "Google Chrome"
-            AppPtaName = "ChromeHTML"
-            AppPtaExt = @('Http','Https')
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -97,15 +95,14 @@ Function Invoke-AdditionalInstall
             {
                 # Set Default App Association
                 $Script_LogPath = "`$ContentPath = ""$($script:ContentPath)"" `n"
-                $Script_InstallName = "`$PTAName = ""$($Script:AppInfo.AppPtaName)"" `n"
  
                 $Script_Assoc = {
                         ."$ContentPath\SFTA.ps1"
-                        Set-PTA $PTAName http
-                        Set-PTA $PTAName https
+                        Set-PTA -ProgId ChromeHTML -Protocol http
+                        Set-PTA -ProgId ChromeHTML -Protocol https
                     }
 
-                $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_InstallName.ToString() + $Script_Assoc.ToString())
+                $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
                 Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now
             }
 

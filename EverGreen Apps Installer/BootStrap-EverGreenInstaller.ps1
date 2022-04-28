@@ -156,7 +156,7 @@ param(
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
         [Alias('ent')]
-        [switch]$EnterpriseMode,
+        [switch]$EnterpriseMode = $true,
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
