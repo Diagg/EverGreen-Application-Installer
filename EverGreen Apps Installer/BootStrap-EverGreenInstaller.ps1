@@ -240,9 +240,12 @@ $script:ContentPath = 'C:\ProgramData\ARI-DSI\Greenstaller-Content'
 If (-not(Test-path $script:ContentPath)){New-Item -Path $script:ContentPath -ItemType Directory -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null}
 
 $Acl = Get-ACL $script:ContentPath
-$AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
-$Acl.AddAccessRule($AccessRule)
-Set-Acl $script:ContentPath $Acl
+If (($Acl.Access|where {$_.IdentityReference -eq "BUILTIN\Users" -and $_.AccessControlType -eq "Allow" -and $_.FileSystemRights -like "*ReadAndExecute*"}).count -lt 1)
+    {
+        $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
+        $Acl.AddAccessRule($AccessRule)
+        Set-Acl $script:ContentPath $Acl
+    }
 
 ##== Do that Omega supreme stuffs and load Includes, environment and dependancies
 Try
