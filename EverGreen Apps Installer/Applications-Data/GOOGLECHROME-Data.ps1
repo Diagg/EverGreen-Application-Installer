@@ -100,6 +100,8 @@ Function Invoke-AdditionalInstall
                         ."$ContentPath\SFTA.ps1"
                         Set-PTA -ProgId ChromeHTML -Protocol http
                         Set-PTA -ProgId ChromeHTML -Protocol https
+                        Set-PTA -ProgId ChromeHTML -Protocol .htm
+                        Set-PTA -ProgId ChromeHTML -Protocol .html
                     }
 
                 $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
@@ -133,6 +135,7 @@ Function Invoke-AdditionalUninstall
                 Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
                 sc.exe delete "GUpdate"
                 sc.exe delete "GUpdatem"
+
             }
 
         If ($ECK.UserIsSystem -eq $true)
@@ -160,6 +163,24 @@ Function Invoke-AdditionalUninstall
                 Else
                     {Write-ECKlog "[Error] Unable to uninstall additional componants for $($Script:AppInfo.AppInstallName) !" -Type 3} 
             }
+
+        # Restore Default App Association
+        $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
+
+        $Script_Assoc = {
+                ."$ContentPath\SFTA.ps1"
+                Set-PTA -ProgId MSEdgeHTM -Protocol http
+                Set-PTA -ProgId MSEdgeHTM -Protocol https
+                Set-PTA -ProgId MSEdgeHTM -Protocol .htm
+                Set-PTA -ProgId MSEdgeHTM -Protocol .html                
+            }
+
+        $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
+        Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now
+
+
+
+
     }
 
 

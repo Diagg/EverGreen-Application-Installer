@@ -94,7 +94,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.7 - 25/04/2022 - Code reworked, all functions removed
 # Script Version:  0.8 - 25/04/2022 - Code cleaning and Bug fixing, Return stream of installed application is now added to $script:Appinfo.AppExecReturn
 # Script Version:  0.8.1 - 27/04/2022 - Bug Fix, Evaluation check script was not working, Registry keys changed to HKLM:\SOFTWARE\OSDC\Greenstaller
-# Script Version:  0.8.2 - 28/04/2022 - Bug Fix
+# Script Version:  0.8.2 - 28/04/2022 - Bug Fix, added status date to registry tagging
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -165,7 +165,7 @@ param(
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]        
-        [switch]$Uninstall,
+        [switch]$Uninstall = $true,
 
         [Parameter(ParameterSetName = 'Online')]
         [Parameter(ParameterSetName = 'Offline')]
@@ -505,6 +505,7 @@ Try
                     Version = $($Script:AppInfo.AppInstalledVersion)
                     Architecture = $($Script:AppInfo.AppArchitecture)
                     Status = 'UpToDate'
+                    StatusDate = $([DateTime]::Now)
                     Channel = $($Script:AppInfo.AppInstallChannel)
                 }
 
@@ -554,6 +555,7 @@ Try
                                                     If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
                                                         {
                                                             Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
+                                                            Set-ItemProperty "$RegTag\$Regitem" -name 'StatusDate' -Value $([DateTime]::Now) -force|Out-Null
                                                             Write-EckLog "$Regitem application status changed to Obsolete !"
                                                         }
                                                 }
