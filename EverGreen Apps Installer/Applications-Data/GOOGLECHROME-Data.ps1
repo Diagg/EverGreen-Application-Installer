@@ -1,4 +1,4 @@
-# Version 0.34 - 28/04/2022
+# Version 0.35 - 01/05/2022
 
 Function Get-AppInfo
     {
@@ -104,8 +104,9 @@ Function Invoke-AdditionalInstall
                         Set-PTA -ProgId ChromeHTML -Protocol .html
                     }
 
+                Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
                 $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
-                Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now
+                Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
             }
 
         If ($Script:AppInfo.AppInstallOptionEnterprise)
@@ -175,8 +176,9 @@ Function Invoke-AdditionalUninstall
                 Set-PTA -ProgId MSEdgeHTM -Protocol .html                
             }
 
+        Write-ECKlog "Restoring default file association !"
         $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
-        Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now
+        Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
 
 
 
