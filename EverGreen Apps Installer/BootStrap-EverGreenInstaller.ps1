@@ -136,6 +136,7 @@ param(
         [switch]$EnterpriseMode = $true,
 
         [switch]$DisableUpdate,
+        [switch]$UpdateWithGreenstaller,
         [switch]$Uninstall = $true,
         [string]$GithubToken,
         [string]$PreScriptURI,
@@ -289,7 +290,7 @@ Try
         Write-EckLog "Gathering information on Application $Application"
         Write-EckLog "******************************************************************"
 
-        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent
+        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent -UpdateWithGreenstaller $UpdateWithGreenstaller.IsPresent
         Get-AppInstallStatus
 
         If ($Script:AppInfo.AppIsInstalled -eq $true)
@@ -471,7 +472,7 @@ Try
                 
 
         ##== Create Update Evaluation Scheduled Task
-        If ($Script:AppInfo.AppInstallOptionDisableUpdate -eq $true)
+        If ($Script:AppInfo.AppInstallOptionDisableUpdate -eq $true -or $Script:AppInfo.AppInstallOptionGreenUpdate -eq $true)
             {
                 Write-EckLog "******************************************************************"
                 Write-EckLog "Installing Update Evaluation Scheduled Task!"
@@ -480,7 +481,7 @@ Try
                 $ScriptBlock_UpdateEval = {
 
                     Get-Module 'EndpointCloudkit*' -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
-                    $LogPath = "C:\Windows\Logs\Greenstaller\Evergreen-ApplicationUpdateEvaluation.log"
+                    $LogPath = "C:\Windows\Logs\Greenstaller\Greenstaller-AppUpdateEvaluation.log"
                     New-ECKEnvironment -LogPath $LogPath
 
                     ##== Main

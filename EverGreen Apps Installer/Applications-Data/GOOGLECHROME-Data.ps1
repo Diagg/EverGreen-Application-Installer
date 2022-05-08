@@ -12,6 +12,8 @@ Function Get-AppInfo
             [Parameter(Mandatory = $false)]
             [bool]$DisableUpdate,
             [Parameter(Mandatory = $false)]
+            [bool]$UpdateWithGreenstaller,
+            [Parameter(Mandatory = $false)]
             [bool]$EnterpriseMode,
             [Parameter(Mandatory = $false)]
             [bool]$SetAsDefault
@@ -31,6 +33,7 @@ Function Get-AppInfo
             AppInstallOptionDefault = $SetAsDefault
             AppInstallOptionEnterprise = $EnterpriseMode
             AppInstallOptionDisableUpdate = $DisableUpdate
+            AppInstallOptionGreenUpdate = $UpdateWithGreenstaller
             AppInstallCMD = "MsiExec"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010,1641)
@@ -112,9 +115,15 @@ Function Invoke-AdditionalInstall
         If ($Script:AppInfo.AppInstallOptionEnterprise)
             {
                 # Remove Desktop Icon
-                Remove-item 'C:\Users\Public\desktop\Google Chrome.lnk' -Force
+                If (test-path 'C:\Users\Public\desktop\Google Chrome.lnk')
+                    {
+                        Write-log "Removing desktop Icon for $($Script:AppInfo.AppInstallName) !"
+                        Remove-Item 'C:\Users\Public\desktop\Google Chrome.lnk' -Force -ErrorAction SilentlyContinue|Out-Null
+                    }
+
 
                 # Remove Automatic Updates
+                Write-log "Removing automatic update for $($Script:AppInfo.AppInstallName) !"
                 $Script:AppInfo.AppInstallOptionDisableUpdate = $true
             } 
     }
