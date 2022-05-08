@@ -1,4 +1,4 @@
-# Version 0.2
+# Version 0.2.1
 
 Function Get-AppInfo
     {
