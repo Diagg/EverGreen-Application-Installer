@@ -1,4 +1,4 @@
-# Version 0.23 - 11/05/2022 
+# Version 0.24 - 11/05/2022 
 
 Function Get-AppInfo
     {
@@ -128,17 +128,17 @@ Function Invoke-AdditionalInstall
                 # Remove Desktop Icon
                 If (test-path "C:\Users\Public\Desktop\Acrobat Reader DC.lnk")
                     {
-                        Write-log "Removing desktop Icon for $($Script:AppInfo.AppInstallName) !"
+                        Write-ECKlog "Removing desktop Icon for $($Script:AppInfo.AppInstallName) !"
                         Remove-Item "C:\Users\Public\Desktop\Acrobat Reader DC.lnk" -Force -ErrorAction SilentlyContinue|Out-Null
                     }
 
 
                 # Remove Automatic Updates
-                Write-log "Removing automatic update for $($Script:AppInfo.AppInstallName) !"
+                Write-ECKlog "Removing automatic update for $($Script:AppInfo.AppInstallName) !"
                 $Script:AppInfo.AppInstallOptionDisableUpdate = $true
 
                 # Remove Welcome message
-                Write-log "Disabling first tour welcome Popup"
+                Write-ECKlog "Disabling first tour welcome Popup"
                 if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen" -force -ea SilentlyContinue|Out-Null }
                 New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen' -Name 'bShowWelcomeScreen' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
 
@@ -175,17 +175,17 @@ Function Invoke-AdditionalUninstall
 
 Function Invoke-DisableUpdateCapability
     {
-        Write-log "Removing Adobe Scheduled task"
+        Write-ECKlog "Removing Adobe Scheduled task"
         Unregister-ScheduledTask -TaskName "Adobe Acrobat Update Task" -Confirm:$false -ErrorAction SilentlyContinue
         
         If (Get-service "AdobeARMService" -ErrorAction SilentlyContinue)
             {
-                Write-log "Removing Adobe service"
+                Write-ECKlog "Removing Adobe service"
                 sc.exe delete "AdobeARMService"
             }
         
         
-        Write-log "Hiding Search for update in menu"
+        Write-ECKlog "Hiding Search for update in menu"
         if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue }
         New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bUpdater' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
     }

@@ -1,4 +1,4 @@
-# Version 0.37 - 11/05/2022
+# Version 0.38 - 11/05/2022
 
 Function Get-AppInfo
     {
@@ -123,13 +123,13 @@ Function Invoke-AdditionalInstall
                 # Remove Desktop Icon
                 If (test-path 'C:\Users\Public\desktop\Google Chrome.lnk')
                     {
-                        Write-log "Removing desktop Icon for $($Script:AppInfo.AppInstallName) !"
+                        Write-ECKlog "Removing desktop Icon for $($Script:AppInfo.AppInstallName) !"
                         Remove-Item 'C:\Users\Public\desktop\Google Chrome.lnk' -Force -ErrorAction SilentlyContinue|Out-Null
                     }
 
 
                 # Remove Automatic Updates
-                Write-log "Removing automatic update for $($Script:AppInfo.AppInstallName) !"
+                Write-ECKlog "Removing automatic update for $($Script:AppInfo.AppInstallName) !"
                 $Script:AppInfo.AppInstallOptionDisableUpdate = $true
             } 
     }
