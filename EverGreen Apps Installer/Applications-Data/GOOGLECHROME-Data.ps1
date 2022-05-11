@@ -1,4 +1,4 @@
-# Version 0.35 - 01/05/2022
+# Version 0.37 - 11/05/2022
 
 Function Get-AppInfo
     {
@@ -16,6 +16,10 @@ Function Get-AppInfo
             [Parameter(Mandatory = $false)]
             [bool]$EnterpriseMode,
             [Parameter(Mandatory = $false)]
+            [bool]$AppInstallNow,
+            [Parameter(Mandatory = $false)]
+            [bool]$AppUnInstallNow,
+            [Parameter(Mandatory = $false)]
             [bool]$SetAsDefault
         )
          
@@ -24,6 +28,8 @@ Function Get-AppInfo
             AppVendor = "Google"
             AppFiendlyName = "Chrome"
             AppInstallName = "Google Chrome"
+            AppInstallNow = $AppInstallNow
+            AppUnInstallNow = $AppUnInstallNow
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"

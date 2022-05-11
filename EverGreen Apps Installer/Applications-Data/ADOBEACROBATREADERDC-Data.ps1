@@ -1,4 +1,4 @@
-# Version 0.2.2
+# Version 0.23 - 11/05/2022 
 
 Function Get-AppInfo
     {
@@ -16,6 +16,10 @@ Function Get-AppInfo
             [Parameter(Mandatory = $false)]
             [bool]$EnterpriseMode,
             [Parameter(Mandatory = $false)]
+            [bool]$AppInstallNow,
+            [Parameter(Mandatory = $false)]
+            [bool]$AppUnInstallNow,
+            [Parameter(Mandatory = $false)]
             [bool]$SetAsDefault
         )         
         
@@ -31,6 +35,8 @@ Function Get-AppInfo
             AppVendor = "Adobe"
             AppFiendlyName = "Acrobat Reader DC"
             AppInstallName = "Adobe Acrobat Reader DC"
+            AppInstallNow = $AppInstallNow
+            AppUnInstallNow = $AppUnInstallNow
             AppExtension = ".exe"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"

@@ -97,6 +97,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.8.2 - 28/04/2022 - Bug Fix, added status date to registry tagging
 # Script Version:  0.9.0 - 29/04/2022 - Fixing the uninstall process, Regisrty keys are now removed, script logic reworked
 # Script Version:  0.10.0 - 01/05/2022 - Removed Offline and Predownload capability from script because less is more...
+# Script Version:  0.11.0 - 08/05/2022 - Code cleanup
 
 
 #Requires -Version 5
@@ -122,7 +123,7 @@ param(
         [string]$GithubRepo = "https://github.com/Diagg/EverGreen-Application-Installer",
         [string]$Log = $("$env:Windir\Logs\Greenstaller\Intaller.log"),
 
-        [ValidateSet("x86", "x64")]
+        [ValidateSet("x86", "x64","X86", "X64")]
         [Alias('arch')]
         [string]$Architecture = "X64",
 
@@ -255,12 +256,19 @@ Try
         If ($Uninstall.IsPresent)
             {
                 Write-EckLog "Selected Action: Uninstallation"
-                $Uninstall = $True
+                $AppUnInstallNow = $true
+                $AppInstallNow = $false
             }
-        ElseIf ($DisableUpdate -eq $true)
-            {Write-EckLog "Install Option: Disabling update feature"}
         Else
-            {Write-EckLog "Selected Action: Installation"}
+            {
+                Write-EckLog "Selected Action: Installation"
+                $AppInstallNow = $true
+                $AppUnInstallNow = $false
+            }
+
+        If ($DisableUpdate -eq $true)
+            {Write-EckLog "Install Option: Disabling update feature"}
+
     
 
         ##== Download APP Data
@@ -290,40 +298,41 @@ Try
         Write-EckLog "Gathering information on Application $Application"
         Write-EckLog "******************************************************************"
 
-        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent -UpdateWithGreenstaller $UpdateWithGreenstaller.IsPresent
+        $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent -UpdateWithGreenstaller $UpdateWithGreenstaller.IsPresent -AppUnInstallNow $AppUnInstallNow -AppInstallNow $AppInstallNow
         Get-AppInstallStatus
 
-        If ($Script:AppInfo.AppIsInstalled -eq $true)
-            {Write-EckLog "Version $($Script:AppInfo.AppInstalledVersion) of $Application detected!"}
-        Else
+        Write-EckLog "Selected Application: $($Script:AppInfo.AppInstallName)"
+        If ($Script:AppInfo.AppAction -ne 'Uninstall') {Write-EckLog "Selected Application Architecture: $($Script:AppInfo.AppInstallArchitecture)"}
+
+        If ($Script:AppInfo.AppIsInstalled -eq $true) {Write-EckLog "Version $($Script:AppInfo.AppInstalledVersion) of $($Script:AppInfo.AppName) detected!"}
+        Else {Write-EckLog "No Installed version of $Application detected!"}
+
+
+        $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Script:AppInfo.AppName | Where-Object Architecture -eq $Script:AppInfo.AppInstallArchitecture
+        If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
+        If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
+
+        if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -like '*stable*'}
+        if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo|Select-Object -Last 1}
+
+        ##==Check if we need to update
+        $AppUpdateStatus = Get-AppUpdateStatus
+        If ($AppUpdateStatus)
             {
-                $AppInstallNow = $true
-                Write-EckLog "No Installed version of $Application detected!"
-            }
-
-        If($OfflineInstall -ne $true)
+                $Script:AppInfo.AppInstallNow = $true
+                If ($Script:AppInfo.AppIsInstalled -eq $true)
+                    {
+                        If ($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true){$Script:AppInfo.AppUnInstallNow = $true}
+                        If ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true){$Script:AppInfo.AppUnInstallNow = $true}
+                    }
+               
+                Write-EckLog "New version of $($Script:AppInfo.AppInstallName) detected! Release version: $($Script:AppEverGreenInfo.Version)"
+            }    
+        Else 
             {
-                $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Application | Where-Object Architecture -eq $Architecture
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
-
-                if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -like '*stable*'}
-                if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo|Select-Object -Last 1}
-
-                ##==Check if we need to update
-                $AppUpdateStatus = Get-AppUpdateStatus
-                If ($AppUpdateStatus)
-                    {
-                        $AppInstallNow = $true
-                        If ($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true -and $Script:AppInfo.AppIsInstalled -eq $true){$Uninstall = $true}
-                        Write-EckLog "New version of $($Script:AppInfo.AppInstallName) detected! Release version: $($Script:AppEverGreenInfo.Version)"
-                    }    
-                Else 
-                    {
-                        $AppInstallNow = $False
-                        Write-EckLog "Version Available online is similar to installed version, Nothing to install !"
-                    }            
-            }
+                $Script:AppInfo.AppInstallNow = $false
+                Write-EckLog "Version Available online is similar to installed version, Nothing to install !"
+            }            
 
  
         ##############################
@@ -351,21 +360,21 @@ Try
                 Write-EckLog "******************************************************************"
 
                 If ($Script:AppInfo.AppIsInstalled -eq $False)
-                    {Write-EckLog "Application $Application is not installed, nothing to uninstall ! All operation finished!!"}
+                    {Write-EckLog "Application $($Script:AppInfo.AppName) is not installed, nothing to uninstall ! All operation finished!!"}
                 Else
                     {
                         ##== Uninstall
                         Write-EckLog "About to run $($Script:AppInfo.AppUninstallCMD) $($Script:AppInfo.AppUninstallParameters)"
                         $Iret = (Start-Process $Script:AppInfo.AppUninstallCMD -ArgumentList $Script:AppInfo.AppUninstallParameters -Wait -Passthru).ExitCode
                         If ($Script:AppInfo.AppUninstallSuccessReturnCodes -contains $Iret)
-                            {Write-EckLog "Application $Application - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
+                            {Write-EckLog "Application $($Script:AppInfo.AppName) - version $($Script:AppInfo.AppInstalledVersion) Uninstalled Successfully !!!"}
                         Else
-                            {Write-EckLog "[Warning] Application $Application - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
+                            {Write-EckLog "[Warning] Application $($Script:AppInfo.AppName) - version $($Script:AppInfo.AppInstalledVersion) returned code $Iret while trying to uninstall !!!" -Type 2}
 
                         ##== Additionnal removal action
                         Write-EckLog "Uninstalling additionnal items !"
                         Invoke-AdditionalUninstall
-                        Remove-Item "HKLM:\SOFTWARE\OSDC\Greenstaller\$Application" -Recurse -Force -ErrorAction SilentlyContinue
+                        Remove-Item "HKLM:\SOFTWARE\OSDC\Greenstaller\$($Script:AppInfo.AppName)" -Recurse -Force -ErrorAction SilentlyContinue
                     }
             }
 
@@ -380,17 +389,17 @@ Try
         If ($AppInstallNow -eq $True)
             {
                 Write-EckLog "******************************************************************"
-                Write-EckLog "Downloading $Application "
+                Write-EckLog "Downloading $($Script:AppInfo.AppName) "
                 Write-EckLog "******************************************************************"
-                Write-EckLog "Found $Application - version: $($Script:AppEverGreenInfo.version) - Architecture: $Architecture - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
+                Write-EckLog "Found $($Script:AppInfo.AppName) - version: $($Script:AppEverGreenInfo.version) - Architecture: $($Script:AppInfo.AppInstallArchitecture) - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
                 Write-EckLog "Download Url: $($Script:AppEverGreenInfo.uri)"
-                Write-EckLog "Downloading installer for $Application - $Architecture" 
+                Write-EckLog "Downloading installer for $($Script:AppInfo.AppName) - $($Script:AppInfo.AppInstallArchitecture)" 
                 $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
                 Write-EckLog "Successfully downloaded $( Split-Path $InstallSourcePath -Leaf) to folder $(Split-Path $InstallSourcePath)"
 
                 ##==Install
                 Write-EckLog "******************************************************************"
-                Write-EckLog "Installing $Application "
+                Write-EckLog "Installing $($Script:AppInfo.AppName) "
                 Write-EckLog "******************************************************************"
 
                 If ((Test-Path $InstallSourcePath) -and (([System.IO.Path]::GetExtension($InstallSourcePath)).ToUpper() -eq $Script:AppInfo.AppExtension.ToUpper()))
@@ -403,18 +412,18 @@ Try
 
                 
                 ## Execute Intall Program
-                Write-EckLog "Installing $Application with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
+                Write-EckLog "Installing $($Script:AppInfo.AppName) with command $($Script:AppInfo.AppInstallCMD) and parameters $($Script:AppInfo.AppInstallParameters)"
                 $ExecProcess = Start-Process $Script:AppInfo.AppInstallCMD -ArgumentList $Script:AppInfo.AppInstallParameters -Wait -Passthru
                 $Script:AppInfo|Add-Member -MemberType NoteProperty -Name 'AppExecReturn' -Value $ExecProcess
                 
                 If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $ExecProcess.ExitCode)
                     {
-                        Write-EckLog "Application $Application - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"
-                        $Script:AppInfo.AppArchitecture = $Architecture.ToUpper()
+                        Write-EckLog "Application $($Script:AppInfo.AppName) - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"
+                        $Script:AppInfo.AppArchitecture = $($Script:AppInfo.AppInstallArchitecture)
                         $Script:AppInfo.AppInstalledVersion = $($Script:AppEverGreenInfo.version)
                     }
                 Else
-                    {Write-EckLog "[ERROR] Application $Application - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+                    {Write-EckLog "[ERROR] Application $($Script:AppInfo.AppName) - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
 
 
                 ##== Install Additionnal Componants
@@ -430,7 +439,7 @@ Try
         If ($DisableUpdate -or $EnterpriseMode -or $Script:AppInfo.AppInstallOptionDisableUpdate -or $Script:AppInfo.AppInstallOptionEnterprise)
             {
                 Write-EckLog "******************************************************************"
-                Write-EckLog "Disabling $Application update feature !"
+                Write-EckLog "Disabling $($Script:AppInfo.AppName) update feature !"
                 Write-EckLog "******************************************************************"
                 Invoke-DisableUpdateCapability
             }
@@ -438,7 +447,7 @@ Try
 
 
         ##== Tag registry
-        $RegTag = "HKLM:\SOFTWARE\OSDC\Greenstaller\$Application"
+        $RegTag = "HKLM:\SOFTWARE\OSDC\Greenstaller\$($Script:AppInfo.AppName)"
  
         If ($Uninstall -eq $true -or ($Script:AppInfo.AppMustUninstallBeforeUpdate -eq $true -and $Script:AppInfo.AppIsInstalled -eq $true -and $AppInstallNow -eq $true) -or ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true -and $Uninstall -eq $true))
             {
@@ -456,7 +465,7 @@ Try
                 Get-AppInstallStatus
                 
                 $Tags = [PSCustomObject]@{
-                    GreenAppName = $Application
+                    GreenAppName = $($Script:AppInfo.AppName)
                     InstallDate = $([DateTime]::Now)
                     Version = $($Script:AppInfo.AppInstalledVersion)
                     Architecture = $($Script:AppInfo.AppArchitecture)
@@ -560,10 +569,10 @@ Try
         Write-EckLog "***************************************************************************************************"
         Write-EckLog "Finished processing time: [$FinishTime]"
         Write-EckLog "Operation duration: [$(($FinishTime - $StartupTime).ToString())]"
-        Write-EckLog "All Operations for $Application Finished!! Exit !"
+        Write-EckLog "All Operations for $($Script:AppInfo.AppName) Finished!! Exit !"
         Write-EckLog "***************************************************************************************************"
         Exit 0 
-     }   
+    }   
 Catch
     {
         Write-EckLog "[ERROR] Fatal Error, the program has stopped !!!" -Type 3
