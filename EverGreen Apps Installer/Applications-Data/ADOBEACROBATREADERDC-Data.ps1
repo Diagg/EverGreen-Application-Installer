@@ -1,4 +1,4 @@
-# Version 0.26 - 11/05/2022 
+# Version 0.27 - 11/05/2022 
 
 Function Get-AppInfo
     {
@@ -119,6 +119,7 @@ Function Invoke-AdditionalInstall
                 $Script_Assoc = {
                         ."$ContentPath\SFTA.ps1"
                         Set-PTA -ProgId AcroExch.Document.DC -Protocol .pdf
+                        Set-PTA -ProgId AcroExch.Document.DC -Protocol .pdfxml
                     }
 
                 Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
@@ -144,6 +145,12 @@ Function Invoke-AdditionalInstall
                 Write-ECKlog "Disabling first tour welcome Popup"
                 if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen" -force -ea SilentlyContinue|Out-Null }
                 New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen' -Name 'bShowWelcomeScreen' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
+
+                # Remove 'Try Adobe Pro DC' button
+                Write-ECKlog "Disabling advertising button"
+                if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue|Out-Null }
+                New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bAcroSuppressUpsell' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
+
 
                 $ScriptBlock_firstTour = {
                         $Reg = "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\FTEDialog"

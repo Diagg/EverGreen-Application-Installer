@@ -98,7 +98,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.9.0 - 29/04/2022 - Fixing the uninstall process, Regisrty keys are now removed, script logic reworked
 # Script Version:  0.10.0 - 01/05/2022 - Removed Offline and Predownload capability from script because less is more...
 # Script Version:  0.11.0 - 08/05/2022 - Code cleanup
-# Script Version:  0.12.0 - 11/05/2022 - All decision are now made using returned object from application data files
+# Script Version:  0.12.1 - 11/05/2022 - All decision are now made using returned object from application data files
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -474,7 +474,7 @@ Try
                     Channel = $($Script:AppInfo.AppInstallChannel)
                 }
 
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Tags|Add-Member -MemberType NoteProperty -Name 'Language' -Value $($Script:AppInfo.AppInstallLanguage) -Forcel}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Tags|Add-Member -MemberType NoteProperty -Name 'Language' -Value $($Script:AppInfo.AppInstallLanguage) -Force}
                 New-ECKTag -Regpath $RegTag -TagsObject $Tags
             }
 
