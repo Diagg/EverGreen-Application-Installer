@@ -1,4 +1,4 @@
-# Version 0.25 - 11/05/2022 
+# Version 0.26 - 11/05/2022 
 
 Function Get-AppInfo
     {
@@ -24,6 +24,7 @@ Function Get-AppInfo
         )         
         
         $Architecture = "X86"
+        $Channel = $Null
         $InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0'
         
         If ($Language -eq $Null){$Language = 'English'}
