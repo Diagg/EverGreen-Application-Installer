@@ -128,7 +128,7 @@ param(
         [string]$Architecture = "X64",
 
         [Alias('lng')]        
-        [string]$Language = $Null,
+        [string]$Language = '$Null',
 
         [Alias('default')]
         [switch]$SetAsDefault = $true,
