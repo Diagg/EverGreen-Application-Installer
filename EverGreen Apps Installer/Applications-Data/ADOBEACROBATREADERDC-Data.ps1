@@ -1,4 +1,4 @@
-# Version 0.28 - 12/05/2022 
+# Version 0.29 - 12/05/2022 
 
 Function Get-AppInfo
     {
@@ -179,6 +179,9 @@ Function Invoke-AdditionalUninstall
         Write-ECKlog "Restoring default file association !"
         $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
         Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+
+        Unregister-ScheduledTask -TaskName "Adobe Acrobat Update Task" -Confirm:$false -ErrorAction SilentlyContinue
+        If (Get-service "AdobeARMService" -ErrorAction SilentlyContinue){sc.exe delete "AdobeARMService"}
 
     }
 
