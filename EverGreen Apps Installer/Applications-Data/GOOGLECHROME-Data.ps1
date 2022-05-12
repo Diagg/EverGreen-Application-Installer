@@ -1,4 +1,4 @@
-# Version 0.39 - 12/05/2022
+# Version 0.40 - 12/05/2022
 
 Function Get-AppInfo
     {
@@ -208,8 +208,8 @@ Function Invoke-DisableUpdateCapability
                 Set-Service GoogleChromeElevationService -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 Set-Service Gupdate -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
                 Set-Service Gupdatem -StartupType Disabled -Status Stopped -ErrorAction SilentlyContinue
-                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false -ErrorAction SilentlyContinue
-                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA*" -Confirm:$false -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore*" -Confirm:$false -ErrorAction SilentlyContinue
                 Sc.exe delete "GUpdate"
                 Sc.exe delete "GUpdatem"
 

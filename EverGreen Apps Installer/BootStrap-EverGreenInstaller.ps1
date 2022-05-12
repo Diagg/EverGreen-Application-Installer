@@ -99,7 +99,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.10.0 - 01/05/2022 - Removed Offline and Predownload capability from script because less is more...
 # Script Version:  0.11.0 - 08/05/2022 - Code cleanup
 # Script Version:  0.13 - 12/05/2022 - All decision are now made using returned object from application data files
-# Script Version:  0.14 - 12/05/2022 - Application parameter now accept list of apps to install 
+# Script Version:  0.14.1 - 12/05/2022 - Application parameter now accept list of apps to install 
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -139,7 +139,7 @@ param(
 
         [switch]$DisableUpdate,
         [switch]$UpdateWithGreenstaller,
-        [switch]$Uninstall = $true,
+        [switch]$Uninstall,
         [string]$GithubToken,
         [string]$PreScriptURI,
         [string]$PostScriptURI,
