@@ -1,4 +1,4 @@
-# Version 0.40 - 12/05/2022
+# Version 0.41 - 12/05/2022
 
 Function Get-AppInfo
     {
@@ -22,7 +22,12 @@ Function Get-AppInfo
             [Parameter(Mandatory = $false)]
             [bool]$SetAsDefault
         )
-         
+        
+        # Default Settings
+        If ([String]::IsNullOrWhiteSpace($Architecture)){$Architecture = "X64"}
+        If ([String]::IsNullOrWhiteSpace($Channel)){$Channel = "stable"}
+        
+        # Application Object 
         [PSCustomObject]@{
             AppName = "GoogleChrome"
             AppVendor = "Google"

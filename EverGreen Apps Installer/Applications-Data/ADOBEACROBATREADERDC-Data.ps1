@@ -1,4 +1,4 @@
-# Version 0.29 - 12/05/2022 
+# Version 0.30 - 12/05/2022 
 
 Function Get-AppInfo
     {
@@ -23,16 +23,18 @@ Function Get-AppInfo
             [bool]$SetAsDefault
         )         
         
+        # Default Settings
         $Architecture = "X86"
         $Channel = $Null
         $InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0'
         
-        If ($Language -eq $Null){$Language = 'English'}
+        If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}
         If ($DisableUpdate -or $EnterpriseMode){$InstParam = $InstParam + ' UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
         If ($EnterpriseMode){$InstParam = $InstParam + ' DISABLEDESKTOPSHORTCUT=1'} 
             
-        If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}       
+              
         
+        # Application Object
         [PSCustomObject]@{
             AppName = "AdobeAcrobatReaderDC"
             AppVendor = "Adobe"

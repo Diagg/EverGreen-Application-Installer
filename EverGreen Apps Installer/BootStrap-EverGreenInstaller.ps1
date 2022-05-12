@@ -99,7 +99,8 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.10.0 - 01/05/2022 - Removed Offline and Predownload capability from script because less is more...
 # Script Version:  0.11.0 - 08/05/2022 - Code cleanup
 # Script Version:  0.13 - 12/05/2022 - All decision are now made using returned object from application data files
-# Script Version:  0.14.3 - 12/05/2022 - Application parameter now accept list of apps to install 
+# Script Version:  0.14.3 - 12/05/2022 - Application parameter now accept list of apps to install
+# Script Version:  0.15 - 12/05/2022 - Default application parameters are now part of application's data files
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -126,10 +127,10 @@ param(
 
         [ValidateSet("x86", "x64","X86", "X64")]
         [Alias('arch')]
-        [string]$Architecture = "X64",
+        [string]$Architecture,
 
         [Alias('lng')]        
-        [string]$Language = $Null,
+        [string]$Language,
 
         [Alias('default')]
         [switch]$SetAsDefault = $true,
@@ -146,7 +147,7 @@ param(
         [string]$UpdatePolicyURI,
 
         [Alias('Release','Branch')]
-        [string]$Channel= "stable"
+        [string]$Channel
      )
 
 ##== Debug
@@ -305,7 +306,7 @@ Try
                 Write-EckLog "Gathering information on Application $App"
                 Write-EckLog "******************************************************************"
 
-                $Script:AppInfo = Get-AppInfo -Architecture $Architecture -Language $Language -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent -UpdateWithGreenstaller $UpdateWithGreenstaller.IsPresent -AppUnInstallNow $AppUnInstallNow -AppInstallNow $AppInstallNow
+                $Script:AppInfo = Get-AppInfo -Architecture $Architecture.IsPresent -Language $Language.IsPresent -DisableUpdate $DisableUpdate.IsPresent -EnterpriseMode $EnterpriseMode.IsPresent -channel $Channel -SetAsDefault $SetAsDefault.IsPresent -UpdateWithGreenstaller $UpdateWithGreenstaller.IsPresent -AppUnInstallNow $AppUnInstallNow -AppInstallNow $AppInstallNow
                 Get-AppInstallStatus
 
                 Write-EckLog "Selected Application: $($Script:AppInfo.AppInstallName)"
