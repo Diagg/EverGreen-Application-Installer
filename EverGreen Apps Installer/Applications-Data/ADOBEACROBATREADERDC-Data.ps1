@@ -1,4 +1,4 @@
-# Version 0.27 - 11/05/2022 
+# Version 0.28 - 12/05/2022 
 
 Function Get-AppInfo
     {
@@ -28,7 +28,7 @@ Function Get-AppInfo
         $InstParam = '-sfx_nu /sPB /rs /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0'
         
         If ($Language -eq $Null){$Language = 'English'}
-        If ($DisableUpdate){$InstParam = $InstParam + ' UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
+        If ($DisableUpdate -or $EnterpriseMode){$InstParam = $InstParam + ' UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
         If ($EnterpriseMode){$InstParam = $InstParam + ' DISABLEDESKTOPSHORTCUT=1'} 
             
         If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}       
@@ -196,6 +196,6 @@ Function Invoke-DisableUpdateCapability
         
         
         Write-ECKlog "Hiding Search for update in menu"
-        if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue }
-        New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bUpdater' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
+        if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue|Out-Null }
+        New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bUpdater' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
     }

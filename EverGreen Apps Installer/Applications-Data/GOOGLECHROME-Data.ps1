@@ -1,4 +1,4 @@
-# Version 0.38 - 11/05/2022
+# Version 0.39 - 12/05/2022
 
 Function Get-AppInfo
     {
@@ -147,8 +147,8 @@ Function Invoke-AdditionalUninstall
                 If (Test-Path ("$CurrentUserProfilePath\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk")){Remove-Item "$CurrentUserProfilePath\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" -Force|Out-Null}
                 If (Test-Path ("C:\Users\Public\Desktop\Google Chrome.lnk")){Remove-Item "C:\Users\Public\Desktop\Google Chrome.lnk" -Force|Out-Null}
 
-                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA" -Confirm:$false -ErrorAction SilentlyContinue
-                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore" -Confirm:$false -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineUA*" -Confirm:$false -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName "GoogleUpdateTaskMachineCore*" -Confirm:$false -ErrorAction SilentlyContinue
                 sc.exe delete "GUpdate"
                 sc.exe delete "GUpdatem"
 
