@@ -4,7 +4,7 @@ Application management 100% in the cloud
 
 ## Description
 Greenstaller is a tool aimed at managing (package/deploy/update) your core applications entirely from the cloud.
-With Greenstaller you can safely deploy your favorite applications (Chrome/7zip/Adobe/Java.. whatever...) with the foolowing benefits:
+With Greenstaller you can safely deploy your favorite applications (Chrome/7zip/Adobe/Java.. whatever...) with the following benefits:
 
 - No infrastructure/Endpoint management tool required.
 - But fully compatible with MECM, MEM and Workspace One.
@@ -27,9 +27,9 @@ Here are few details on how a single script can handle all those features:
 
 Greenstaller doesn't needs to create package because it downloads latest version of application binary directly from authors site using [Evergreen](https://github.com/aaronparker/evergreen) and [NeverGreen](https://github.com/DanGough/Nevergreen).
 
-Greenstaller doesn't either needs to create package to customize installation. the logic and Knowledge historically embedded in packages is now publicly shared on Github.
+Greenstaller doesn't either needs to create package to customize installation. the logic and Knowledge historically embedded in packages are now publicly shared on Github.
 
-If your endpoints are managed by an MDM, Greenstaller will ease application management even further! No need to include application sources in the MDM app. Everything needed is packed in a single command line.
+If your endpoints are managed by an MDM, Greenstaller will ease application management even further: No need to include application sources in the MDM app. Everything needed is packed in a single command line.
 
 With Greenstaller, there is no need to update MDM application each time a new release is available. Greenstaller embrase the 'set it & forget it' app management mantra.  
 
