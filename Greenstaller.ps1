@@ -36,29 +36,29 @@ C:\Windows\Logs\EvergreenApplication\EverGreen-Installer.log
 all action are logged to the log file specified by the log parameter
 
 .EXAMPLE
-C:\PS> .\BootStrap-EverGreenInstallation -Application GoogleChrome -Architecture x86
+C:\PS> .\Greenstaller.ps1 -Application GoogleChrome -Architecture x86
 
 Download and silently Install the lastest x86 version of Google Chrome.
 
 .EXAMPLE
-C:\PS> .\BootStrap-EverGreenInstallation -Application GoogleChrome -DisableUpdate
+C:\PS> .\Greenstaller.ps1 -Application GoogleChrome -DisableUpdate
 
 Download and silently Install the lastest x64 version of Google Chrome.
 And disable all update mechanism
 
 .EXAMPLE
-C:\PS> .\BootStrap-EverGreenInstallation -Application GoogleChrome -Uninstall
+C:\PS> .\Greenstaller.ps1 -Application GoogleChrome -Uninstall
 
 Uninstall any locally installed version of Google Chrome
 
 .EXAMPLE
-C:\PS> .\BootStrap-EverGreenInstallation -Application GoogleChrome -PostScriptURI https://gist.github.com/smuel1414/87ca0ab4544d95556c778908afad2f1d -GithubToken 992a03b2846cb2d1d3e323ca25f1e60e7caabf0a
+C:\PS> .\Greenstaller.ps1 -Application GoogleChrome -PostScriptURI https://gist.github.com/smuel1414/87ca0ab4544d95556c778908afad2f1d -GithubToken 992a03b2846cb2d1d3e323ca25f1e60e7caabf0a
 
 Download and silently Install the lastest x64 version of Google Chrome,
 Then download and execute the script from gist repo.
 
 .EXAMPLE
-Powershell.Exe -executionpolicy bypass -file BootStrap-EverGreenInstaller.ps1 -Application GoogleChrome -Architecture x64
+Powershell.Exe -executionpolicy bypass -file Greenstaller.ps1 -Application GoogleChrome -Architecture x64
 
 Syntaxe for Intune Integration
 
@@ -100,7 +100,8 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.11.0 - 08/05/2022 - Code cleanup
 # Script Version:  0.13 - 12/05/2022 - All decision are now made using returned object from application data files
 # Script Version:  0.14.3 - 12/05/2022 - Application parameter now accept list of apps to install
-# Script Version:  0.15 - 12/05/2022 - Default application parameters are now part of application's data files
+# Script Version:  0.15 - 12/05/2022 - Default application parameters are now part of application's data 
+# Script Version: 0.15.1 - 14/05/2022 - Github path changed du to repo rename
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -122,7 +123,7 @@ param(
         [Alias('app')]        
         [String[]]$Application,
 
-        [string]$GithubRepo = "https://github.com/Diagg/EverGreen-Application-Installer",
+        [string]$GithubRepo = "https://github.com/Diagg/Greenstaller",
         [string]$Log = $("$env:Windir\Logs\Greenstaller\Intaller.log"),
 
         [ValidateSet("x86", "x64","X86", "X64")]
@@ -283,7 +284,7 @@ Try
                 Write-EckLog "******************************************************************"
                 Write-EckLog "Retriving data from Github for Application $App"
                 Write-EckLog "******************************************************************"
-                $AppDataCode = Get-ECKGithubContent -URI "$GithubRepo/blob/master/EverGreen%20Apps%20Installer/Applications-Data/$($App.toUpper())-Data.ps1"
+                $AppDataCode = Get-ECKGithubContent -URI "$GithubRepo/blob/master/Applications-Data/$($App.toUpper())-Data.ps1"
                 Write-ECKlog "Downloaded File $($App.toUpper())-Data.ps1 - $($AppDataCode.Split([Environment]::NewLine)[0].replace('# ',''))"
                 Try 
                     {
