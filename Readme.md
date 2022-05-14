@@ -57,8 +57,8 @@ Thoses files described how executables should be installed, uninstalled, customi
 This the part where everyone can share knowledge and best practices on deploying the most common applications
 
 ## Additional credits
-NeverGreen - [Dan Cough](https://github.com/DanGough/Nevergreen)
-EverGreen - [Aaron Parker](https://github.com/aaronparker/evergreen)
+NeverGreen - [Dan Cough](https://github.com/DanGough/Nevergreen)  
+EverGreen - [Aaron Parker](https://github.com/aaronparker/evergreen)  
 PS-SFTA - [DannySys Team](https://github.com/DanysysTeam/PS-SFTA)  
 RunHiddenConsole - [Christian Seidlitz](https://github.com/SeidChr/RunHiddenConsole)  
 EndPoint Cloud Kit - [Diagg/OSDC](https://github.com/Diagg/EndPoint-CloudKit)
