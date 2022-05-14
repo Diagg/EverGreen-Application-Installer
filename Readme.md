@@ -49,11 +49,14 @@ Technically, not much, both tools are probably even better. The difference relie
 If "sharing is caring" means something for you, go Greenstaller !
 
 **Nice stuff guy, how can i contribute ?**
-If you are in a good mood for donation, please give some coins to great guys [Aaron Parker](https://ko-fi.com/stealthpuppy) and [Dan Cough](https://packageology.com/about/) project owners of Evergreen and Nevergreen. Without those guys Greenstaller would never have existed.  
+If you are in a good mood for donation, please give some coins to great guys [Aaron Parker](https://ko-fi.com/stealthpuppy) and [Dan Cough](https://packageology.com/about/) project owners of Evergreen and Nevergreen.  
+Without those guys Greenstaller would never have existed.
+
 If you know about packaging, Powershell or both, you can of course help debugging, improve, test or report issue.  
+
 Most appreciated: You can submit application install/uninstall methods in Powershell to support more products.  
-The heart of Greenstaller is located in the Applications-Data folder within APPLICATION-Data.ps1 files.
-Thoses files described how executables should be installed, uninstalled, customized and even more,  
+The heart of Greenstaller is located in the Applications-Data folder within APPLICATION-Data.ps1 files.  
+Those files describe how executables should be installed, uninstalled, customized and even more.    
 This the part where everyone can share knowledge and best practices on deploying the most common applications
 
 ## Additional credits
