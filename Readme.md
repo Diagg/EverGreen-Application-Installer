@@ -35,25 +35,28 @@ With Greenstaller, there is no need to update MDM application each time a new re
 
 If you have internet and admin rights on your endpoints you already have the required infrastructure in place !
 
-## Quick FAQ
+## Quick F.A.Q
 
-**What is the difference with [PSAD](https://psappdeploytoolkit.com/) ?**  
-This is the same kind of tool but with cloud in mind from the early inception.
+**What is the difference between Greenstaller and [PSAD](https://psappdeploytoolkit.com/) ?**  
+This is the same kind of tool, but Greenstaller was built with cloud in mind from the early inception.
 
-**What is the difference with [Patch my PC](https://patchmypc.com/home-updater) ?**  
+**What is the difference between Greenstaller and [Patch my PC](https://patchmypc.com/home-updater) ?**  
 Patch my PC can pretty do a hell lots more like reporting or support.  
 If those stuffs are no big deal for you or if you simply can't/dont want to pay, you should consider Greenstaller
 
-**What is the difference with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) or [Chocolatey](https://chocolatey.org/) ?**  
-Technically, not much, both tools are probably even better. The difference relies in the philosophy: Greenstaller is a community project built with the secret hope of democratizing packaging knowledge for standard applications and help lonely admins/Packagers in their duty.  
+**What is the difference between Greenstaller and [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) or [Chocolatey](https://chocolatey.org/) ?**  
+Technically, not much, both tools are probably even better. The difference relies in the philosophy: Greenstaller is a community project built with the secret hope of pushing the packaging industry in a new direction, democratizing packaging knowledge for standard applications and help lonely admins/Packagers in their duty.  
 If "sharing is caring" means something for you, go Greenstaller !
 
 **Nice stuff guy, how can i contribute ?**
 If you are in a good mood for donation, please give some coins to great guys [Aaron Parker](https://ko-fi.com/stealthpuppy) and [Dan Cough](https://packageology.com/about/) project owners of Evergreen and Nevergreen. Without those guys Greenstaller would never have existed.  
 If you know about packaging, Powershell or both, you can of course help debugging, improve, test or report issue.  
-Most appreciated: You can submit application install/uninstall methods in Powershell to support more products (files like ADOBEACROBATREADERDC-Data.ps1).
+Most appreciated: You can submit application install/uninstall methods in Powershell to support more products.  
+The heart of Greenstaller is located in the Applications-Data folder within APPLICATION-Data.ps1 files.
+Thoses files described how executables should be installed, uninstalled, customized and even more,  
+This the part where everyone can share knowledge and best practices on deploying the most common applications
 
-** Additional credits
+## Additional credits
 NeverGreen - [Dan Cough](https://github.com/DanGough/Nevergreen)
 EverGreen - [Aaron Parker](https://github.com/aaronparker/evergreen)
 PS-SFTA - [DannySys Team](https://github.com/DanysysTeam/PS-SFTA)  
