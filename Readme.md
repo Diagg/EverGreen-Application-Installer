@@ -37,19 +37,28 @@ If you have internet and admin rights on your endpoints you already have the req
 
 ## Quick FAQ
 
-What is the difference with [PSAD](https://psappdeploytoolkit.com/) ?  
+**What is the difference with [PSAD](https://psappdeploytoolkit.com/) ?**  
 This is the same kind of tool but with cloud in mind from the early inception.
 
-What is the difference with [Patch my PC](https://patchmypc.com/home-updater) ?  
-Patch my PC can pretty do a hell lots more and offers support. If this no big deal for you or if you simply can't/dont want to pay, you should consider Greenstaller
+**What is the difference with [Patch my PC](https://patchmypc.com/home-updater) ?**  
+Patch my PC can pretty do a hell lots more like reporting or support.  
+If those stuffs are no big deal for you or if you simply can't/dont want to pay, you should consider Greenstaller
 
-What is the difference with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) or [Chocolatey](https://chocolatey.org/) ?  
-Technically, not much, both tools are probably even better. The difference relies in the philosophy: Greenstaller is a free open source community project built with the secret hope of democratizing packaging knowledge and help lonely admins/Packagers in their duty. "If sharing is caring" means something for you, go Greenstaller !
+**What is the difference with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) or [Chocolatey](https://chocolatey.org/) ?**  
+Technically, not much, both tools are probably even better. The difference relies in the philosophy: Greenstaller is a community project built with the secret hope of democratizing packaging knowledge for standard applications and help lonely admins/Packagers in their duty.  
+If "sharing is caring" means something for you, go Greenstaller !
 
-Nice stuff guy, how can i contribute ?
-- If you are in a good mood for donation, please give some coins to great guys [Arron Parker](https://ko-fi.com/stealthpuppy) and [Dan Cough](https://packageology.com/about/) project owners of Evergreen and Nevergreen. Without those guys Greenstaller would never have existed.
-- If you Know packaging, Powershell or both, you can help debugging, improve, test or submit application install/uninstall methods to support more products.
+**Nice stuff guy, how can i contribute ?**
+If you are in a good mood for donation, please give some coins to great guys [Aaron Parker](https://ko-fi.com/stealthpuppy) and [Dan Cough](https://packageology.com/about/) project owners of Evergreen and Nevergreen. Without those guys Greenstaller would never have existed.  
+If you know about packaging, Powershell or both, you can of course help debugging, improve, test or report issue.  
+Most appreciated: You can submit application install/uninstall methods in Powershell to support more products (files like ADOBEACROBATREADERDC-Data.ps1).
 
+** Additional credits
+NeverGreen - [Dan Cough](https://github.com/DanGough/Nevergreen)
+EverGreen - [Aaron Parker](https://github.com/aaronparker/evergreen)
+PS-SFTA - [DannySys Team](https://github.com/DanysysTeam/PS-SFTA)  
+RunHiddenConsole - [Christian Seidlitz](https://github.com/SeidChr/RunHiddenConsole)  
+EndPoint Cloud Kit - [Diagg/OSDC](https://github.com/Diagg/EndPoint-CloudKit)
 
 Diagg/OSD-Couture.com
 
