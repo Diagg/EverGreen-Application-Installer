@@ -48,7 +48,7 @@ If those stuffs are no big deal for you or if you simply can't/dont want to pay,
 Technically, not much, both tools are probably even better. The difference relies in the philosophy: Greenstaller is a community project built with the secret hope of pushing the packaging industry in a new direction, democratizing packaging knowledge for standard applications and help lonely admins/Packagers in their duty.  
 If "sharing is caring" means something for you, go Greenstaller !
 
-**Nice stuff guy, how can i contribute ?**
+**Nice stuff guy, how can i contribute ?**  
 If you are in a good mood for donation, please give some coins to great guys [Aaron Parker](https://ko-fi.com/stealthpuppy) and [Dan Cough](https://packageology.com/about/) project owners of Evergreen and Nevergreen.  
 Without those guys Greenstaller would never have existed.
 
