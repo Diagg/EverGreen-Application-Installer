@@ -27,13 +27,11 @@ Here are few details on how a single script can handle all those features:
 
 Greenstaller doesn't needs to create package because it downloads latest version of application binary directly from authors site using [Evergreen](https://github.com/aaronparker/evergreen) and [NeverGreen](https://github.com/DanGough/Nevergreen).
 
-Greenstaller doesn't either needs to create package to customize installation. the logic and Knowledge historically embedded in packages are now publicly shared on Github.
+Greenstaller doesn't either needs to create package to customize installation. the logic and Knowledge historically embedded in packages are now shared and retrieved from Github.
 
-If your endpoints are managed by an MDM, Greenstaller will ease application management even further: No need to include application sources in the MDM app. Everything needed is packed in a single command line.
+With those capabilities, MDM application management can be simplified to the max: If sources are downloaded from the web, there is no need to create or update MDM application package! A command to call the Github script is enoughs. Simply enjoy 'set it & forget it' modern app management!
 
-With Greenstaller, there is no need to update MDM application each time a new release is available. Greenstaller embrase the 'set it & forget it' app management mantra.  
-
-If you have internet and admin rights on your endpoints you already have the required infrastructure in place !
+As all components are stored in the cloud, requirements are minimal: If you have internet and admin rights on your endpoints you have the required infrastructure in place to run Greenstaller!
 
 ## Quick F.A.Q
 
