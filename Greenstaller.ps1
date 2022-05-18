@@ -347,6 +347,7 @@ Try
                 $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Script:AppInfo.AppName | Where-Object Architecture -eq $Script:AppInfo.AppInstallArchitecture
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallType))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Type -eq $Script:AppInfo.AppInstallType}
 
                 if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -like '*stable*'}
                 if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo|Select-Object -Last 1}

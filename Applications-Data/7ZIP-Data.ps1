@@ -44,6 +44,7 @@ Function Get-AppInfo
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+            AppInstallType = "msi" 
             AppInstallChannel = $($Channel.ToUpper())           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
