@@ -101,7 +101,8 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.13 - 12/05/2022 - All decision are now made using returned object from application data files
 # Script Version:  0.14.3 - 12/05/2022 - Application parameter now accept list of apps to install
 # Script Version:  0.15 - 12/05/2022 - Default application parameters are now part of application's data 
-# Script Version: 0.15.1 - 14/05/2022 - Github path changed du to repo rename
+# Script Version: 0.15.1 - 14/05/2022 - Github path changed due to repo rename
+# Script Version: 0.16.0 - 15/05/2022 - Added support for NeverGreen
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -110,16 +111,6 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 param(
 
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateSet("1Password","7zip","AdobeAcrobat","AdobeAcrobatReaderDC","AdobeBrackets","AdoptOpenJDK","Anki","AtlassianBitbucket","BISF","BitwardenDesktop","CitrixAppLayeringFeed",
-        "CitrixApplicationDeliveryManagementFeed","CitrixEndpointManagementFeed","CitrixGatewayFeed","CitrixHypervisorFeed","CitrixLicensingFeed","CitrixReceiverFeed","CitrixSdwanFeed",
-        "CitrixVirtualAppsDesktopsFeed","CitrixVMTools","CitrixWorkspaceApp","CitrixWorkspaceAppFeed","ControlUpAgent","ControlUpConsole","Cyberduck","dnGrep","FileZilla","Fork",
-        "FoxitReader","Gimp","GitForWindows","GitHubAtom","GitHubRelease","GoogleChrome","Greenshot","Handbrake","JamTreeSizeFree","JamTreeSizeProfessional","KeePass","KeePassXCTeamKeePassXC",
-        "LibreOffice","Microsoft.NET","Microsoft365Apps","MicrosoftAzureDataStudio","MicrosoftBicep","MicrosoftEdge","MicrosoftFSLogixApps","MicrosoftOneDrive","MicrosoftPowerShell",
-        "MicrosoftPowerToys","MicrosoftSsms","MicrosoftTeams","MicrosoftVisualStudio","MicrosoftVisualStudioCode","MicrosoftWindowsPackageManagerClient","MicrosoftWvdBootloader",
-        "MicrosoftWvdInfraAgent","MicrosoftWvdRemoteDesktop","MicrosoftWvdRtcService","MozillaFirefox","MozillaThunderbird","mRemoteNG","NETworkManager","NotepadPlusPlus","OpenJDK","OpenShellMenu",
-        "OracleJava8","OracleVirtualBox","PaintDotNet","PDFForgePDFCreator","PeaZipPeaZip","ProjectLibre","RCoreTeamRforWindows","RingCentral","ScooterBeyondCompare","ShareX","Slack","StefansToolsgregpWin",
-        "SumatraPDFReader","TeamViewer","TelegramDesktop","TelerikFiddlerEverywhere","Terminals","VastLimitsUberAgent","VercelHyper","VideoLanVlcPlayer","VMwareTools","Win32OpenSSH",
-        "WinMerge","WinSCP","WixToolset","Zoom")]
         [Alias('app')]        
         [String[]]$Application,
 
@@ -196,7 +187,7 @@ $script:GreenstallerContentPath = 'C:\ProgramData\Greenstaller-Content'
 If (-not(Test-path $script:GreenstallerContentPath)){New-Item -Path $script:GreenstallerContentPath -ItemType Directory -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null}
 
 $Acl = Get-ACL $script:GreenstallerContentPath
-If (($Acl.Access|where {$_.IdentityReference -eq "BUILTIN\Users" -and $_.AccessControlType -eq "Allow" -and $_.FileSystemRights -like "*ReadAndExecute*"}).count -lt 1)
+If (($Acl.Access|Where-Object {$_.IdentityReference -eq "BUILTIN\Users" -and $_.AccessControlType -eq "Allow" -and $_.FileSystemRights -like "*ReadAndExecute*"}).count -lt 1)
     {
         $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
         $Acl.AddAccessRule($AccessRule)
@@ -210,15 +201,15 @@ Try
             {
                 If(-not (get-module 'EndpointCloudKit*')){$ECKMod | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force}
                 New-ECKEnvironment -LogPath $Log
-                Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -LogPath $log
+                Initialize-ECKPrereq -Module Evergreen,Nevergreen -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -LogPath $log
             }
         Else
             {
-                #$ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq-Alpha.ps1"
-                $ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq.ps1"
+                $ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq-Alpha.ps1"
+                #$ScriptURI = "https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit-Bootstrap/master/Initialize-ECKPrereq.ps1"
                 $Fileraw = (Invoke-WebRequest -URI $ScriptURI -UseBasicParsing -ErrorAction Stop).content
                 Invoke-Expression ("<#" + $Fileraw) -ErrorAction Stop
-                Initialize-ECKPrereq -Module "Evergreen" -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -LogPath $log
+                Initialize-ECKPrereq -Module Evergreen,Nevergreen -ContentToLoad 'https://github.com/DanysysTeam/PS-SFTA/blob/master/SFTA.ps1' -LogPath $log
             }
     }
 catch 
@@ -229,6 +220,42 @@ Try
     {
         foreach ($App in $Application)
             {
+
+                ##== Check If Application Name is valid
+                If (($App.Substring($App.Length - 2)).ToUpper() -eq '-E')
+                    {
+                        $App = $App.replace('-E',"")
+                        $FoundApp = Find-EvergreenApp -Name $app -erroraction SilentlyContinue -WarningAction SilentlyContinue
+                        $Autority = "E"
+                    }
+                elseif (($App.Substring($App.Length - 2)).ToUpper() -eq '-N') 
+                    {
+                        $App = $App.replace('-N',"")
+                        $FoundApp = Find-NevergreenApp -Name $app
+                        $Autority = "N"                        
+                    }
+                else 
+                    {
+                        $FoundApp = Find-EvergreenApp -Name $app -erroraction SilentlyContinue -WarningAction SilentlyContinue
+                        $Autority = "E"
+                    }
+                
+                If ($FoundApp.Count -eq 0)
+                    {
+                        If ($Autority -eq "E") {$FoundApp = Find-NevergreenApp -Name $app}
+                        If ($Autority -eq "N") {$FoundApp = $FoundApp = Find-EvergreenApp -Name $app -erroraction SilentlyContinue -WarningAction SilentlyContinue}
+                    }
+
+                If ($FoundApp.Count -ne 1 -and $app -notin $FoundApp.Name)
+                    {
+                        If ($FoundApp -lt 1){Write-ECKlog "[ERROR] No application found with Name $App, Aborthing !!!" -Type 3}
+                        If ($FoundApp -gt 1){Write-ECKlog "[ERROR] Too much results reported for application  $App, Aborthing !!!" -Type 3}
+                        Write-ECKlog "List of supported names of Evergeen:"
+                        Find-EvergreenApp|Write-ECKlog $_.name
+                        Write-ECKlog "List of supported names of Nevergeen:" 
+                        Find-NevergreenApp|ForEach-Object{write-ECKLOG $_} 
+                        Exit 1
+                    }
 
                 ##== Local Constantes
                 $AppDownloadDir = "$env:Public\Downloads\$App"
@@ -394,8 +421,6 @@ Try
                 #### Application installation
                 ##############################
 
-
-        
                 ##==Download
                 If ($Script:AppInfo.AppInstallNow -eq $True)
                     {
