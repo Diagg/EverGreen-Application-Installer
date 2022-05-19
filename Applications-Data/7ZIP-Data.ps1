@@ -1,4 +1,4 @@
-# Version 0.30 - 12/05/2022 
+# Version 0.1 - 19/05/2022 
 
 Function Get-AppInfo
     {
@@ -29,9 +29,8 @@ Function Get-AppInfo
         Else
             {If ([String]::IsNullOrWhiteSpace($Architecture)){$Architecture = "X86"}}    
 
-        
         If ([String]::IsNullOrWhiteSpace($Channel)){$Channel = $null}
-
+ 
        
         # Application Object
         [PSCustomObject]@{
@@ -112,82 +111,48 @@ Function Get-AppUpdateStatus
 
 Function Invoke-AdditionalInstall
     {
+        # Set Default App Association
+        $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
 
-        If ($Script:AppInfo.AppInstallOptionDefault -or $Script:AppInfo.AppInstallOptionEnterprise)
-            {
-                # Set Default App Association
-                $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
- 
-                $Script_Assoc = {
-                        ."$ContentPath\SFTA.ps1"
-                        Set-PTA -ProgId 7-Zip.7z -Protocol .7z
-                        Set-PTA -ProgId 7-Zip.arj -Protocol .arj
-                        Set-PTA -ProgId 7-Zip.bz2 -Protocol .bz2
-                        Set-PTA -ProgId 7-Zip.bzip2 -Protocol .bzip2
-                        Set-PTA -ProgId 7-Zip.cab -Protocol .cab
-                        Set-PTA -ProgId 7-Zip.cpio -Protocol .cpio
-                        Set-PTA -ProgId 7-Zip.deb -Protocol .deb
-                        Set-PTA -ProgId 7-Zip.dmg -Protocol .dmg
-                        Set-PTA -ProgId 7-Zip.gz -Protocol .gz                                               
-                        Set-PTA -ProgId 7-Zip.gzip -Protocol .gzip
-                        Set-PTA -ProgId 7-Zip.hfs -Protocol .hfs
-                        Set-PTA -ProgId 7-Zip.lha -Protocol .lha
-                        Set-PTA -ProgId 7-Zip.lzh -Protocol .lzh
-                        Set-PTA -ProgId 7-Zip.lzma -Protocol .lzma
-                        Set-PTA -ProgId 7-Zip.rar -Protocol .rar
-                        Set-PTA -ProgId 7-Zip.rpm -Protocol .rpm
-                        Set-PTA -ProgId 7-Zip.split -Protocol .split
-                        Set-PTA -ProgId 7-Zip.swm -Protocol .swm
-                        Set-PTA -ProgId 7-Zip.tar -Protocol .tar
-                        Set-PTA -ProgId 7-Zip.taz -Protocol .taz
-                        Set-PTA -ProgId 7-Zip.tbz -Protocol .tbz
-                        Set-PTA -ProgId 7-Zip.tbz2 -Protocol .tbz2
-                        Set-PTA -ProgId 7-Zip.tgz -Protocol .tgz
-                        Set-PTA -ProgId 7-Zip.tpz -Protocol .tpz
-                        Set-PTA -ProgId 7-Zip.wim -Protocol .wim
-                        Set-PTA -ProgId 7-Zip.xar -Protocol .xar
-                        Set-PTA -ProgId 7-Zip.z -Protocol .z
-                        Set-PTA -ProgId 7-Zip.zip -Protocol .zip
-                    }
-
-                Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
-                $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
-                Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+        $Script_Assoc = {
+                ."$ContentPath\SFTA.ps1"
+                Set-PTA -ProgId 7-Zip.7z -Protocol .7z
+                Set-PTA -ProgId 7-Zip.arj -Protocol .arj
+                Set-PTA -ProgId 7-Zip.bz2 -Protocol .bz2
+                Set-PTA -ProgId 7-Zip.bzip2 -Protocol .bzip2
+                Set-PTA -ProgId 7-Zip.cab -Protocol .cab
+                Set-PTA -ProgId 7-Zip.cpio -Protocol .cpio
+                Set-PTA -ProgId 7-Zip.deb -Protocol .deb
+                Set-PTA -ProgId 7-Zip.dmg -Protocol .dmg
+                Set-PTA -ProgId 7-Zip.gz -Protocol .gz                                               
+                Set-PTA -ProgId 7-Zip.gzip -Protocol .gzip
+                Set-PTA -ProgId 7-Zip.hfs -Protocol .hfs
+                Set-PTA -ProgId 7-Zip.lha -Protocol .lha
+                Set-PTA -ProgId 7-Zip.lzh -Protocol .lzh
+                Set-PTA -ProgId 7-Zip.lzma -Protocol .lzma
+                Set-PTA -ProgId 7-Zip.rar -Protocol .rar
+                Set-PTA -ProgId 7-Zip.rpm -Protocol .rpm
+                Set-PTA -ProgId 7-Zip.split -Protocol .split
+                Set-PTA -ProgId 7-Zip.swm -Protocol .swm
+                Set-PTA -ProgId 7-Zip.tar -Protocol .tar
+                Set-PTA -ProgId 7-Zip.taz -Protocol .taz
+                Set-PTA -ProgId 7-Zip.tbz -Protocol .tbz
+                Set-PTA -ProgId 7-Zip.tbz2 -Protocol .tbz2
+                Set-PTA -ProgId 7-Zip.tgz -Protocol .tgz
+                Set-PTA -ProgId 7-Zip.tpz -Protocol .tpz
+                Set-PTA -ProgId 7-Zip.wim -Protocol .wim
+                Set-PTA -ProgId 7-Zip.xar -Protocol .xar
+                Set-PTA -ProgId 7-Zip.z -Protocol .z
+                Set-PTA -ProgId 7-Zip.zip -Protocol .zip
             }
+
+        Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
+        $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
+        Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+
 
         If ($Script:AppInfo.AppInstallOptionEnterprise)
             {
-                # Remove Desktop Icon
-                If (test-path "C:\Users\Public\Desktop\Acrobat Reader DC.lnk")
-                    {
-                        Write-ECKlog "Removing desktop Icon for $($Script:AppInfo.AppInstallName) !"
-                        Remove-Item "C:\Users\Public\Desktop\Acrobat Reader DC.lnk" -Force -ErrorAction SilentlyContinue|Out-Null
-                    }
-
-
-                # Remove Automatic Updates
-                Write-ECKlog "Removing automatic update for $($Script:AppInfo.AppInstallName) !"
-                $Script:AppInfo.AppInstallOptionDisableUpdate = $true
-
-                # Remove Welcome message
-                Write-ECKlog "Disabling first tour welcome Popup"
-                if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen" -force -ea SilentlyContinue|Out-Null }
-                New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown\cWelcomeScreen' -Name 'bShowWelcomeScreen' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
-
-                # Remove 'Try Adobe Pro DC' button
-                Write-ECKlog "Disabling advertising button"
-                if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue|Out-Null }
-                New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bAcroSuppressUpsell' -Value 1 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
-
-
-                $ScriptBlock_firstTour = {
-                        $Reg = "HKCU:\SOFTWARE\Adobe\Acrobat Reader\DC\FTEDialog"
-                        if((Test-Path -LiteralPath $Reg) -ne $true) {New-Item $Reg -force -ea SilentlyContinue }
-                        New-ItemProperty -LiteralPath $Reg -Name 'iFTEVersion' -Value 0x0000000a -PropertyType DWord -Force -ea SilentlyContinue
-                        New-ItemProperty -LiteralPath $Reg -Name 'iLastCardShown' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue
-                    }
-
-                Invoke-ECKScheduledTask -TaskName 'Disable-AdobeFirstTour' -Context user -ScriptBlock $ScriptBlock_firstTour -now -WaitFinished
 
             } 
     }
@@ -195,13 +160,39 @@ Function Invoke-AdditionalInstall
 
 Function Invoke-AdditionalUninstall
     {
-
         # Restore Default App Association
         $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
 
         $Script_Assoc = {
                 ."$ContentPath\SFTA.ps1"
-                Set-PTA -ProgId MSEdgeHTM -Protocol .pdf                
+                Remove-FTA -ProgId 7-Zip.7z -Extension.7z
+                Remove-FTA -ProgId 7-Zip.arj -Extension .arj
+                Remove-FTA -ProgId 7-Zip.bz2 -Extension .bz2
+                Remove-FTA -ProgId 7-Zip.bzip2 -Extension .bzip2
+                Remove-FTA -ProgId 7-Zip.cab -Extension .cab
+                Remove-FTA -ProgId 7-Zip.cpio -Extension .cpio
+                Remove-FTA -ProgId 7-Zip.deb -Extension .deb
+                Remove-FTA -ProgId 7-Zip.dmg -Extension .dmg
+                Remove-FTA -ProgId 7-Zip.gz -Extension .gz                                               
+                Remove-FTA -ProgId 7-Zip.gzip -Extension .gzip
+                Remove-FTA -ProgId 7-Zip.hfs -Extension .hfs
+                Remove-FTA -ProgId 7-Zip.lha -Extension .lha
+                Remove-FTA -ProgId 7-Zip.lzh -Extension .lzh
+                Remove-FTA -ProgId 7-Zip.lzma -Extension .lzma
+                Remove-FTA -ProgId 7-Zip.rar -Extension .rar
+                Remove-FTA -ProgId 7-Zip.rpm -Extension .rpm
+                Remove-FTA -ProgId 7-Zip.split -Extension .split
+                Remove-FTA -ProgId 7-Zip.swm -Extension .swm
+                Remove-FTA -ProgId 7-Zip.tar -Extension .tar
+                Remove-FTA -ProgId 7-Zip.taz -Extension .taz
+                Remove-FTA -ProgId 7-Zip.tbz -Extension .tbz
+                Remove-FTA -ProgId 7-Zip.tbz2 -Extension .tbz2
+                Remove-FTA -ProgId 7-Zip.tgz -Extension .tgz
+                Remove-FTA -ProgId 7-Zip.tpz -Extension .tpz
+                Remove-FTA -ProgId 7-Zip.wim -Extension .wim
+                Remove-FTA -ProgId 7-Zip.xar -Extension .xar
+                Remove-FTA -ProgId 7-Zip.z -Extension .z
+                Remove-FTA -ProgId 7-Zip.zip -Extension .zip               
             }
 
         Write-ECKlog "Restoring default file association !"
@@ -216,17 +207,5 @@ Function Invoke-AdditionalUninstall
 
 Function Invoke-DisableUpdateCapability
     {
-        Write-ECKlog "Removing Adobe Scheduled task"
-        Unregister-ScheduledTask -TaskName "Adobe Acrobat Update Task" -Confirm:$false -ErrorAction SilentlyContinue
-        
-        If (Get-service "AdobeARMService" -ErrorAction SilentlyContinue)
-            {
-                Write-ECKlog "Removing Adobe service"
-                sc.exe delete "AdobeARMService"
-            }
-        
-        
-        Write-ECKlog "Hiding Search for update in menu"
-        if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown") -ne $true) {New-Item "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" -force -ea SilentlyContinue|Out-Null }
-        New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown' -Name 'bUpdater' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue|Out-Null
+
     }

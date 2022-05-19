@@ -1,4 +1,4 @@
-# Version 0.30 - 12/05/2022 
+# Version 0.31 - 19/05/2022 
 
 Function Get-AppInfo
     {
@@ -45,6 +45,7 @@ Function Get-AppInfo
             AppExtension = ".exe"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+            AppInstallType = $Null 
             AppInstallChannel = $($Channel.ToUpper())           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
@@ -113,21 +114,19 @@ Function Get-AppUpdateStatus
 Function Invoke-AdditionalInstall
     {
 
-        If ($Script:AppInfo.AppInstallOptionDefault -or $Script:AppInfo.AppInstallOptionEnterprise)
-            {
-                # Set Default App Association
-                $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
- 
-                $Script_Assoc = {
-                        ."$ContentPath\SFTA.ps1"
-                        Set-PTA -ProgId AcroExch.Document.DC -Protocol .pdf
-                        Set-PTA -ProgId AcroExch.Document.DC -Protocol .pdfxml
-                    }
+        # Set Default App Association
+        $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
 
-                Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
-                $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
-                Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+        $Script_Assoc = {
+                ."$ContentPath\SFTA.ps1"
+                Set-PTA -ProgId AcroExch.Document.DC -Protocol .pdf
+                Set-PTA -ProgId AcroExch.Document.DC -Protocol .pdfxml
             }
+
+        Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
+        $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
+        Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+
 
         If ($Script:AppInfo.AppInstallOptionEnterprise)
             {

@@ -1,4 +1,4 @@
-# Version 0.41 - 12/05/2022
+# Version 0.42 - 19/05/2022
 
 Function Get-AppInfo
     {
@@ -38,6 +38,7 @@ Function Get-AppInfo
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+            AppInstallType = $Null
             AppInstallChannel = $($Channel.ToUpper())           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
@@ -105,23 +106,21 @@ Function Get-AppUpdateStatus
 
 Function Invoke-AdditionalInstall
     {
-        If ($Script:AppInfo.AppInstallOptionDefault -or $Script:AppInfo.AppInstallOptionEnterprise)
-            {
-                # Set Default App Association
-                $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
- 
-                $Script_Assoc = {
-                        ."$ContentPath\SFTA.ps1"
-                        Set-PTA -ProgId ChromeHTML -Protocol http
-                        Set-PTA -ProgId ChromeHTML -Protocol https
-                        Set-PTA -ProgId ChromeHTML -Protocol .htm
-                        Set-PTA -ProgId ChromeHTML -Protocol .html
-                    }
+        # Set Default App Association
+        $Script_LogPath = "`$ContentPath = ""$($ECK.ContentPath)"" `n"
 
-                Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
-                $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
-                Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+        $Script_Assoc = {
+                ."$ContentPath\SFTA.ps1"
+                Set-PTA -ProgId ChromeHTML -Protocol http
+                Set-PTA -ProgId ChromeHTML -Protocol https
+                Set-PTA -ProgId ChromeHTML -Protocol .htm
+                Set-PTA -ProgId ChromeHTML -Protocol .html
             }
+
+        Write-ECKlog "Setting file association for $($Script:AppInfo.AppInstallName) !"
+        $ScriptBlock = [ScriptBlock]::Create($Script_LogPath.ToString() + $Script_Assoc.ToString())
+        Invoke-ECKScheduledTask -TaskName 'Set-Assoc' -Context user -ScriptBlock $ScriptBlock -now -WaitFinished
+
 
         If ($Script:AppInfo.AppInstallOptionEnterprise)
             {
