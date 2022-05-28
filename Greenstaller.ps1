@@ -101,8 +101,9 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.13 - 12/05/2022 - All decision are now made using returned object from application data files
 # Script Version:  0.14.3 - 12/05/2022 - Application parameter now accept list of apps to install
 # Script Version:  0.15 - 12/05/2022 - Default application parameters are now part of application's data 
-# Script Version: 0.15.1 - 14/05/2022 - Github path changed due to repo rename
-# Script Version: 0.16.0 - 15/05/2022 - Added support for NeverGreen
+# Script Version:  0.15.1 - 14/05/2022 - Github path changed due to repo rename
+# Script Version:  0.16.0 - 15/05/2022 - Added support for NeverGreen
+# Script Version:  0.17.0 - 16/05/2022 - engine selection relocated in data file
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -220,43 +221,6 @@ Try
     {
         foreach ($App in $Application)
             {
-
-                ##== Check If Application Name is valid
-                If (($App.Substring($App.Length - 2)).ToUpper() -eq '-E')
-                    {
-                        $App = $App.replace('-E',"")
-                        $FoundApp = Find-EvergreenApp -Name $app -erroraction SilentlyContinue -WarningAction SilentlyContinue
-                        $Autority = "E"
-                    }
-                elseif (($App.Substring($App.Length - 2)).ToUpper() -eq '-N') 
-                    {
-                        $App = $App.replace('-N',"")
-                        $FoundApp = Find-NevergreenApp -Name $app
-                        $Autority = "N"                        
-                    }
-                else 
-                    {
-                        $FoundApp = Find-EvergreenApp -Name $app -erroraction SilentlyContinue -WarningAction SilentlyContinue
-                        $Autority = "E"
-                    }
-                
-                If ($FoundApp.Count -eq 0)
-                    {
-                        If ($Autority -eq "E") {$FoundApp = Find-NevergreenApp -Name $app}
-                        If ($Autority -eq "N") {$FoundApp = $FoundApp = Find-EvergreenApp -Name $app -erroraction SilentlyContinue -WarningAction SilentlyContinue}
-                    }
-
-                If ($FoundApp.Count -ne 1 -and $app -notin $FoundApp.Name)
-                    {
-                        If ($FoundApp -lt 1){Write-ECKlog "[ERROR] No application found with Name $App, Aborthing !!!" -Type 3}
-                        If ($FoundApp -gt 1){Write-ECKlog "[ERROR] Too much results reported for application  $App, Aborthing !!!" -Type 3}
-                        Write-ECKlog "List of supported names of Evergeen:"
-                        Find-EvergreenApp|Write-ECKlog $_.name
-                        Write-ECKlog "List of supported names of Nevergeen:" 
-                        Find-NevergreenApp|ForEach-Object{write-ECKLOG $_} 
-                        Exit 1
-                    }
-
                 ##== Local Constantes
                 $AppDownloadDir = "$env:Public\Downloads\$App"
                 If(-not(Test-path $AppDownloadDir)){New-Item $AppDownloadDir -Force -ItemType Directory -ErrorAction SilentlyContinue|Out-Null}
@@ -316,7 +280,7 @@ Try
                 Try 
                     {
                         If ($AppDataCode -ne $False){Invoke-Expression $AppDataCode -ErrorAction Stop} 
-                        Else{Write-EckLog "[Error] Unable to execute $App data garthering, bad return code, Aborting !!!" -Type 3 ; Exit} 
+                        Else{Write-EckLog "[Error] Unable to Find $App data file, unsupprorted application, Aborting !!!" -Type 3 ; Exit} 
                     }
                 Catch 
                     {
@@ -343,14 +307,17 @@ Try
                 If ($Script:AppInfo.AppIsInstalled -eq $true) {Write-EckLog "Version $($Script:AppInfo.AppInstalledVersion) of $($Script:AppInfo.AppName) detected!"}
                 Else {Write-EckLog "No Installed version of $($Script:AppInfo.AppName) detected!"}
 
+                If($Script:AppInfo.AppAuthority.toUpper() -eq 'EVERGREEN')
+                    {$Script:AppAutorityInfo = Get-EvergreenApp -Name $Script:AppInfo.AppName | Where-Object Architecture -eq $Script:AppInfo.AppInstallArchitecture}        
+                ElseIf($Script:AppInfo.AppAuthority.toUpper() -eq 'NEVERGREEN')
+                    {$Script:AppAutorityInfo = Get-NevergreenApp -Name $Script:AppInfo.AppName | Where-Object Architecture -eq $Script:AppInfo.AppInstallArchitecture}
 
-                $Script:AppEverGreenInfo = Get-EvergreenApp -Name $Script:AppInfo.AppName | Where-Object Architecture -eq $Script:AppInfo.AppInstallArchitecture
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallType))){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Type -eq $Script:AppInfo.AppInstallType}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallType))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Type -eq $Script:AppInfo.AppInstallType}
 
-                if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo = $Script:AppEverGreenInfo|Where-Object Channel -like '*stable*'}
-                if($Script:AppEverGreenInfo.Count -gt 1){$Script:AppEverGreenInfo|Select-Object -Last 1}
+                if($Script:AppAutorityInfo.Count -gt 1){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Channel -like '*stable*'}
+                if($Script:AppAutorityInfo.Count -gt 1){$Script:AppAutorityInfo|Select-Object -Last 1}
 
                 ##==Check if we need to update
                 If ($Script:AppInfo.AppUnInstallNow -ne $true)
@@ -365,7 +332,7 @@ Try
                                         If ($Script:AppInfo.AppInstallArchitecture -ne $Script:AppInfo.AppArchitecture -and $Script:AppInfo.AppMustUninstallOnArchChange -eq $true){$Script:AppInfo.AppUnInstallNow = $true}
                                     }
                
-                                Write-EckLog "New version of $($Script:AppInfo.AppInstallName) detected! Release version: $($Script:AppEverGreenInfo.Version)"
+                                Write-EckLog "New version of $($Script:AppInfo.AppInstallName) detected! Release version: $($Script:AppAutorityInfo.Version)"
                             }    
                         Else 
                             {
@@ -428,10 +395,10 @@ Try
                         Write-EckLog "******************************************************************"
                         Write-EckLog "Downloading $($Script:AppInfo.AppName) "
                         Write-EckLog "******************************************************************"
-                        Write-EckLog "Found $($Script:AppInfo.AppName) - version: $($Script:AppEverGreenInfo.version) - Architecture: $($Script:AppInfo.AppInstallArchitecture) - Release Date: $($Script:AppEverGreenInfo.Date) available on Internet"
-                        Write-EckLog "Download Url: $($Script:AppEverGreenInfo.uri)"
+                        Write-EckLog "Found $($Script:AppInfo.AppName) - version: $($Script:AppAutorityInfo.version) - Architecture: $($Script:AppInfo.AppInstallArchitecture) - Release Date: $($Script:AppAutorityInfo.Date) available on Internet"
+                        Write-EckLog "Download Url: $($Script:AppAutorityInfo.uri)"
                         Write-EckLog "Downloading installer for $($Script:AppInfo.AppName) - $($Script:AppInfo.AppInstallArchitecture)" 
-                        $InstallSourcePath = $Script:AppEverGreenInfo|Save-EvergreenApp -Path $AppDownloadDir
+                        $InstallSourcePath = $Script:AppAutorityInfo|Save-EvergreenApp -Path $AppDownloadDir
                         Write-EckLog "Successfully downloaded $( Split-Path $InstallSourcePath -Leaf) to folder $(Split-Path $InstallSourcePath)"
 
                         ##==Install
@@ -455,12 +422,12 @@ Try
                 
                         If ($Script:AppInfo.AppInstallSuccessReturnCodes -contains $ExecProcess.ExitCode)
                             {
-                                Write-EckLog "Application $($Script:AppInfo.AppName) - version $($Script:AppEverGreenInfo.version) Installed Successfully !!!"
+                                Write-EckLog "Application $($Script:AppInfo.AppName) - version $($Script:AppAutorityInfo.version) Installed Successfully !!!"
                                 $Script:AppInfo.AppArchitecture = $($Script:AppInfo.AppInstallArchitecture)
-                                $Script:AppInfo.AppInstalledVersion = $($Script:AppEverGreenInfo.version)
+                                $Script:AppInfo.AppInstalledVersion = $($Script:AppAutorityInfo.version)
                             }
                         Else
-                            {Write-EckLog "[ERROR] Application $($Script:AppInfo.AppName) - version $($Script:AppEverGreenInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
+                            {Write-EckLog "[ERROR] Application $($Script:AppInfo.AppName) - version $($Script:AppAutorityInfo.version) returned code $Iret while trying to Install !!!" -Type 3}
 
 
                         ##== Install Additionnal Componants
@@ -557,11 +524,11 @@ Try
                                                     Write-EckLog "Installed version : $AppInstalledVersion"
 
                                                     Write-EckLog "Checking for Newer version online..."
-                                                    $AppEverGreenInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
-                                                    If (-not([string]::IsNullOrWhiteSpace($AppInstalledChannel))){$AppEverGreenInfo = $AppEverGreenInfo|Where-Object Channel -eq $AppInstalledChannel}
-                                                    Write-EckLog "Latest version available online: $($AppEverGreenInfo.Version)"
+                                                    $AppAutorityInfo = Get-EvergreenApp -Name $Regitem | Where-Object Architecture -eq $AppInstalledArchitecture
+                                                    If (-not([string]::IsNullOrWhiteSpace($AppInstalledChannel))){$AppAutorityInfo = $AppAutorityInfo|Where-Object Channel -eq $AppInstalledChannel}
+                                                    Write-EckLog "Latest version available online: $($AppAutorityInfo.Version)"
 
-                                                    If ([version]($AppEverGreenInfo.Version) -gt [version]$AppInstalledVersion)
+                                                    If ([version]($AppAutorityInfo.Version) -gt [version]$AppInstalledVersion)
                                                         {
                                                             Set-ItemProperty "$RegTag\$Regitem" -name 'Status' -Value "Obsolete" -force|Out-Null
                                                             Set-ItemProperty "$RegTag\$Regitem" -name 'StatusDate' -Value $([DateTime]::Now) -force|Out-Null
