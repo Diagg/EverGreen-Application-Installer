@@ -1,4 +1,4 @@
-# Version 0.31 - 19/05/2022 
+# Version 0.32 - 28/05/2022 
 
 Function Get-AppInfo
     {
@@ -36,6 +36,7 @@ Function Get-AppInfo
         
         # Application Object
         [PSCustomObject]@{
+            AppAuthority = "EverGreen"
             AppName = "AdobeAcrobatReaderDC"
             AppVendor = "Adobe"
             AppFiendlyName = "Acrobat Reader DC"

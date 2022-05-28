@@ -31,7 +31,7 @@ Greenstaller doesn't either needs to create package to customize installation. t
 
 With those capabilities, MDM application management can be simplified to the max: If sources are downloaded from the web, there is no need to create or update MDM application package! A command to call the Github script is enoughs. Simply enjoy 'set it & forget it' modern app management!
 
-As all components are stored in the cloud, requirements are minimal: If you have internet and admin rights on your endpoints you have the required infrastructure in place to run Greenstaller!
+As all components are stored in the cloud, requirements are minimal: If you have internet and admin rights on your endpoints you have the required infrastructure in place to run Greenstaller! 
 
 ## Quick F.A.Q
 

@@ -1,4 +1,4 @@
-# Version 0.1 - 19/05/2022 
+# Version 0.2 - 28/05/2022 
 
 Function Get-AppInfo
     {
@@ -30,10 +30,12 @@ Function Get-AppInfo
             {If ([String]::IsNullOrWhiteSpace($Architecture)){$Architecture = "X86"}}    
 
         If ([String]::IsNullOrWhiteSpace($Channel)){$Channel = $null}
+        If ([String]::IsNullOrWhiteSpace($UpdateWithGreenstaller)){$UpdateWithGreenstaller = $true}
  
        
         # Application Object
         [PSCustomObject]@{
+            AppAuthority = "EverGreen"
             AppName = "7zip"
             AppVendor = "Igor Pavlov"
             AppFiendlyName = "7zip"
@@ -153,7 +155,7 @@ Function Invoke-AdditionalInstall
 
         If ($Script:AppInfo.AppInstallOptionEnterprise)
             {
-
+                Write-ECKlog "Nothing set for Additional Enterprise option !"
             } 
     }
 
@@ -207,5 +209,5 @@ Function Invoke-AdditionalUninstall
 
 Function Invoke-DisableUpdateCapability
     {
-
+        Write-ECKlog "Nothing set to disable update capability, this capability is not relevant for $($Script:AppInfo.AppInstallName)  !"
     }

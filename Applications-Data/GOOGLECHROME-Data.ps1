@@ -1,4 +1,4 @@
-# Version 0.42 - 19/05/2022
+# Version 0.43 - 28/05/2022
 
 Function Get-AppInfo
     {
@@ -29,6 +29,7 @@ Function Get-AppInfo
         
         # Application Object 
         [PSCustomObject]@{
+            AppAuthority = "EverGreen"
             AppName = "GoogleChrome"
             AppVendor = "Google"
             AppFiendlyName = "Chrome"
