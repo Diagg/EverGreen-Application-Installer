@@ -1,4 +1,4 @@
-# Version 0.1 - 28/05/2022
+# Version 0.2 - 28/05/2022
 
 Function Get-AppInfo
     {
@@ -29,8 +29,7 @@ Function Get-AppInfo
         Else
             {If ([String]::IsNullOrWhiteSpace($Architecture)){$Architecture = "X86"}}    
 
-        If ([String]::IsNullOrWhiteSpace($Channel)){$Channel = 'Msi'}
-
+        $AppInstallType = 'Msi'
         $InstParam = '/i ##APP##'
         
         If (-not ($DisableUpdate) -and -not ($EnterpriseMode)){$InstParam = $InstParam + ' ZoomAutoUpdate=true EnableSilentAutoUpdate=true SetUpdatingChannel=false'}
@@ -51,7 +50,7 @@ Function Get-AppInfo
             AppExtension = ".msi"
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-            AppInstallType = $Null
+            AppInstallType = $AppInstallType
             AppInstallChannel = $($Channel.ToUpper())           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallLanguage = $($Language.ToUpper())
