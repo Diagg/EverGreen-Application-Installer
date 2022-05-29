@@ -316,7 +316,7 @@ Try
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallType))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Type -eq $Script:AppInfo.AppInstallType}
-                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallPlateform))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Plateform -eq $Script:AppInfo.AppInstallPlateform}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallPlatform))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Platform -eq $Script:AppInfo.AppInstallPlatform}
 
                 if($Script:AppAutorityInfo.Count -gt 1){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Channel -like '*stable*'}
                 if($Script:AppAutorityInfo.Count -gt 1){$Script:AppAutorityInfo|Select-Object -Last 1}

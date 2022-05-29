@@ -43,7 +43,7 @@ Function Get-AppInfo
             AppInstallType = "exe" 
             AppInstallChannel = $null           
             AppInstallArchitecture = $($Architecture.ToUpper())
-            AppInstallPlateform = "Windows"
+            AppInstallPlatform = "Windows"
             AppInstallLanguage = $null
             AppInstallOptionDefault = $SetAsDefault
             AppInstallOptionEnterprise = $EnterpriseMode
