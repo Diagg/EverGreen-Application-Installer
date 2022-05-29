@@ -129,11 +129,11 @@ param(
         [switch]$SetAsDefault = $true,
 
         [Alias('ent')]
-        [switch]$EnterpriseMode,
+        [switch]$EnterpriseMode = $true,
 
         [switch]$DisableUpdate,
         [switch]$UpdateWithGreenstaller,
-        [switch]$Uninstall,
+        [switch]$Uninstall = $true,
         [string]$GithubToken,
         [string]$PreScriptURI,
         [string]$PostScriptURI,
