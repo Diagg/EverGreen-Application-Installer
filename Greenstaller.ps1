@@ -134,7 +134,7 @@ param(
 
         [switch]$DisableUpdate,
         [switch]$UpdateWithGreenstaller,
-        [switch]$Uninstall,
+        [switch]$Uninstall=$true,
         [string]$GithubToken,
         [string]$PreScriptURI,
         [string]$PostScriptURI,
