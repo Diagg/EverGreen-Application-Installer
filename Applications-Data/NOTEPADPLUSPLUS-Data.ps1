@@ -1,4 +1,4 @@
-# Version 0.2 - 29/05/2022 
+# Version 0.3 - 29/05/2022 
 
 Function Get-AppInfo
     {
