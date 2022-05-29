@@ -104,6 +104,7 @@ Write-EckLog based on work by someone i could not remember (Feel free to reatch 
 # Script Version:  0.15.1 - 14/05/2022 - Github path changed due to repo rename
 # Script Version:  0.16.0 - 15/05/2022 - Added support for NeverGreen
 # Script Version:  0.17.0 - 16/05/2022 - engine selection relocated in data file
+# Script Version:  0.17.1 - 29/05/2022 - added AppInstallPlateform to application info properties
 
 #Requires -Version 5
 #Requires -RunAsAdministrator 
@@ -315,6 +316,7 @@ Try
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallLanguage))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Language -eq $Script:AppInfo.AppInstallLanguage}
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallChannel))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Channel -eq $Script:AppInfo.AppInstallChannel}
                 If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallType))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Type -eq $Script:AppInfo.AppInstallType}
+                If (-not([string]::IsNullOrWhiteSpace($Script:AppInfo.AppInstallPlateform))){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Plateform -eq $Script:AppInfo.AppInstallPlateform}
 
                 if($Script:AppAutorityInfo.Count -gt 1){$Script:AppAutorityInfo = $Script:AppAutorityInfo|Where-Object Channel -like '*stable*'}
                 if($Script:AppAutorityInfo.Count -gt 1){$Script:AppAutorityInfo|Select-Object -Last 1}
@@ -440,7 +442,7 @@ Try
 
  
                 ##== Remove Update capabilities
-                If ($Script:AppInfo.AppInstallOptionDisableUpdate -or $Script:AppInfo.AppInstallOptionEnterprise)
+                If ($Script:AppInfo.AppInstallNow -eq $True -and ($Script:AppInfo.AppInstallOptionDisableUpdate -or $Script:AppInfo.AppInstallOptionEnterprise))
                     {
                         Write-EckLog "******************************************************************"
                         Write-EckLog "Disabling $($Script:AppInfo.AppName) update feature !"
@@ -485,7 +487,7 @@ Try
                 
 
                 ##== Create Update Evaluation Scheduled Task
-                If ($Script:AppInfo.AppInstallOptionDisableUpdate -eq $true -or $Script:AppInfo.AppInstallOptionGreenUpdate -eq $true)
+                If ($Script:AppInfo.AppInstallNow -eq $True -and ($Script:AppInfo.AppInstallOptionDisableUpdate -eq $true -or $Script:AppInfo.AppInstallOptionGreenUpdate -eq $true))
                     {
                         Get-ScheduledTask -TaskName 'Greenstaller Update Evaluation' -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue|Out-Null
 

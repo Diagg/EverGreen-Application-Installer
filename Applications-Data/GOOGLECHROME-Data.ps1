@@ -1,4 +1,4 @@
-# Version 0.43 - 28/05/2022
+# Version 0.44 - 29/05/2022
 
 Function Get-AppInfo
     {
@@ -47,7 +47,7 @@ Function Get-AppInfo
             AppInstallOptionEnterprise = $EnterpriseMode
             AppInstallOptionDisableUpdate = $DisableUpdate
             AppInstallOptionGreenUpdate = $UpdateWithGreenstaller
-            AppInstallCMD = "MsiExec"
+            AppInstallCMD = "MsiExec.exe"
             AppInstallParameters = "/i ##APP## ALLUSERS=1 /qb"
             AppInstallSuccessReturnCodes = @(0,3010,1641)
             AppUninstallSuccessReturnCodes = @(0,3010,1641)
