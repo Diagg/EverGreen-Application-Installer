@@ -26,11 +26,7 @@ Function Get-AppInfo
         # Default Settings
         If ([String]::IsNullOrWhiteSpace($Architecture)){$Architecture = "X86"}
 
-        If ([String]::IsNullOrWhiteSpace($Language)){$Language = "English"}
-        If ($DisableUpdate -or $EnterpriseMode){$InstParam = $InstParam + ' UPDATE_MODE=0 DISABLE_ARM_SERVICE_INSTALL=1'}
-        If ($EnterpriseMode){$InstParam = $InstParam + ' DISABLEDESKTOPSHORTCUT=1'} 
-            
-              
+     
         
         # Application Object
         [PSCustomObject]@{
