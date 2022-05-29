@@ -1,4 +1,4 @@
-# Version 0.1 - 29/05/2022 
+# Version 0.2 - 29/05/2022 
 
 Function Get-AppInfo
     {
@@ -41,10 +41,10 @@ Function Get-AppInfo
             AppDetection_X86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" 
             AppDetection_X64 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
             AppInstallType = "exe" 
-            AppInstallChannel = $($Channel.ToUpper())           
+            AppInstallChannel = $null           
             AppInstallArchitecture = $($Architecture.ToUpper())
             AppInstallPlateform = "Windows"
-            AppInstallLanguage = $($Language.ToUpper())
+            AppInstallLanguage = $null
             AppInstallOptionDefault = $SetAsDefault
             AppInstallOptionEnterprise = $EnterpriseMode
             AppInstallOptionDisableUpdate = $DisableUpdate
