@@ -130,7 +130,7 @@ param(
         [switch]$SetAsDefault = $true,
 
         [Alias('ent')]
-        [switch]$EnterpriseMode = $true,
+        [switch]$EnterpriseMode,
 
         [switch]$DisableUpdate,
         [switch]$UpdateWithGreenstaller,
